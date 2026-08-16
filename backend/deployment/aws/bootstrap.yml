@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >
+  Opsify GitHub Actions OIDC bootstrap for AWS deployments.
+
+Parameters:
+  GitHubRepository:
+    Type: String
+    Description: GitHub repository in owner/repository format.
+    Default: AtharvaGGourshete/Opsify
+
+Resources:
+
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+
+      ClientIdList:
+        - sts.amazonaws.com
+
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+
+  GitHubActionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: OpsifyGitHubActionsRole
+
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+
+        Statement:
+          - Effect: Allow
+
+            Principal:
+              Federated:
+                Fn::GetAtt:
+                  - GitHubOIDCProvider
+                  - Arn
+
+            Action:
+              - sts:AssumeRoleWithWebIdentity
+
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud:
+                  - sts.amazonaws.com
+
+              StringLike:
+                token.actions.githubusercontent.com:sub:
+                  - !Sub repo:${GitHubRepository}:ref:refs/heads/main
+
+      Policies:
+        - PolicyName: OpsifyDeploymentPolicy
+
+          PolicyDocument:
+            Version: "2012-10-17"
+
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - cloudformation:*
+                  - lambda:*
+                  - apigateway:*
+                  - s3:*
+                  - logs:*
+                  - iam:PassRole
+                Resource: "*"
+
+Outputs:
+
+  GitHubActionsRoleArn:
+    Description: IAM role ARN used by GitHub Actions through OIDC.
+    Value:
+      Fn::GetAtt:
+        - GitHubActionsRole
+        - Arn
+
+  GitHubOIDCProviderArn:
+    Description: GitHub OIDC provider ARN.
+    Value:
+      Fn::GetAtt:
+        - GitHubOIDCProvider
+        - Arn
