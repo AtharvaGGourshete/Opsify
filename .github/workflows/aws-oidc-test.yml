@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Show GitHub OIDC claims
+        uses: github/actions-oidc-debugger@main
+
       - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::787471169631:role/OpsifyGitHubActionsRole
