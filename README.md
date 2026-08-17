@@ -11,7 +11,9 @@ Opsify is an early full-stack app scaffold for repository analysis.
   - `POST /api/repositories/analyze`
 - GitHub auth is wired in the frontend through NextAuth.
 - Frontend routes currently include `/` and `/dashboard`.
-- AWS deployment bootstrap exists at `backend/deployment/aws/bootstrap.yml` for GitHub Actions OIDC.
+- AWS files exist under `backend/deployment/aws/`:
+  - `bootstrap.yml` creates a GitHub Actions OIDC role.
+  - `template.yml` defines a minimal AWS SAM Lambda test endpoint at `GET /test`.
 
 ## Backend
 
@@ -32,6 +34,16 @@ The backend runs on `http://localhost:5000` by default.
 ```
 
 It clones the GitHub repository, scans files, detects languages/packages/frameworks/apps/databases/infrastructure, generates Repomix context, then returns a repository profile.
+
+## AWS Deployment
+
+`backend/deployment/aws/template.yml` is currently a minimal SAM template, separate from the Express API. It deploys `backend/deployment/aws/src/app.js` as a Node.js 22 Lambda that returns:
+
+```json
+{
+  "message": "Opsify AWS SAM deployment works!"
+}
+```
 
 ## Frontend
 
@@ -63,4 +75,4 @@ AUTH_SECRET=
 - No automated tests configured.
 - Frontend backend URL is hardcoded to `http://localhost:5000` in the dashboard.
 - Frontend metadata and README are still mostly default scaffold content.
-- Production deployment is not fully wired beyond the AWS OIDC bootstrap template.
+- AWS SAM deployment currently only covers a test Lambda, not the full backend API.
