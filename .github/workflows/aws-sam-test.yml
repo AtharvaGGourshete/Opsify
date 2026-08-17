@@ -33,8 +33,9 @@ jobs:
         working-directory: backend/deployment/aws
         run: |
           sam deploy \
-            --stack-name opsify-sam-test \
-            --region ap-south-1 \
-            --capabilities CAPABILITY_IAM \
-            --no-confirm-changeset \
-            --no-fail-on-empty-changeset
+          --stack-name opsify-sam-test \
+          --region ap-south-1 \
+          --resolve-s3 \
+          --capabilities CAPABILITY_IAM \
+          --no-confirm-changeset \
+          --no-fail-on-empty-changeset
