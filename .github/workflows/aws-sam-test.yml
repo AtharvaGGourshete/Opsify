@@ -19,7 +19,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v6
         with:
           # role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/OpsifyGitHubActionsRole
-          role-to-assume: arn:aws:iam::787471169631:role/OpsifyGitHubActionsRole
+          #role-to-assume: arn:aws:iam::787471169631:role/OpsifyGitHubActionsRole
+          role-to-assume: arn:aws:iam::787471169631:role/OpsifyDeploymentRole
           aws-region: ap-south-1
 
       - name: Setup SAM CLI

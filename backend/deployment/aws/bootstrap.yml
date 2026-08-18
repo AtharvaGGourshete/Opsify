@@ -1,57 +1,78 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: >
-  Opsify GitHub Actions OIDC bootstrap for AWS deployments.
+  Opsify AWS bootstrap. Creates the IAM deployment role
+  required for GitHub Actions OIDC deployments.
 
 Parameters:
+
+  GitHubOwner:
+    Type: String
+    Description: GitHub organization or user name.
+    Default: AtharvaGGourshete
+
+  GitHubOwnerId:
+    Type: String
+    Description: GitHub owner numeric ID.
+    Default: "158183496"
+
   GitHubRepository:
     Type: String
-    Description: GitHub repository in owner/repository format.
-    Default: AtharvaGGourshete/Opsify
+    Description: GitHub repository name.
+    Default: Opsify
+
+  GitHubRepositoryId:
+    Type: String
+    Description: GitHub repository numeric ID.
+    Default: "1331317336"
+
+  GitHubBranch:
+    Type: String
+    Description: GitHub branch allowed to deploy.
+    Default: main
+
+  GitHubOIDCProviderArn:
+    Type: String
+    Description: ARN of the existing GitHub Actions OIDC provider.
+
 
 Resources:
 
-  GitHubOIDCProvider:
-    Type: AWS::IAM::OIDCProvider
-    Properties:
-      Url: https://token.actions.githubusercontent.com
-
-      ClientIdList:
-        - sts.amazonaws.com
-
-      ThumbprintList:
-        - 6938fd4d98bab03faadb97b34396831e3780aea1
-
-  GitHubActionsRole:
+  OpsifyDeploymentRole:
     Type: AWS::IAM::Role
+
     Properties:
-      RoleName: OpsifyGitHubActionsRole
+      RoleName: OpsifyDeploymentRole
+
+      Description: >
+        IAM role assumed by GitHub Actions through GitHub OIDC
+        for Opsify deployments.
 
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
 
         Statement:
+
           - Effect: Allow
 
             Principal:
-              Federated:
-                Fn::GetAtt:
-                  - GitHubOIDCProvider
-                  - Arn
+              Federated: !Ref GitHubOIDCProviderArn
 
             Action:
               - sts:AssumeRoleWithWebIdentity
 
             Condition:
+
               StringEquals:
+
                 token.actions.githubusercontent.com:aud:
                   - sts.amazonaws.com
 
-              StringLike:
                 token.actions.githubusercontent.com:sub:
-                  - !Sub repo:${GitHubRepository}:ref:refs/heads/main
+                  - !Sub "repo:${GitHubOwner}@${GitHubOwnerId}/${GitHubRepository}@${GitHubRepositoryId}:ref:refs/heads/${GitHubBranch}"
 
       Policies:
+
         - PolicyName: OpsifyDeploymentPolicy
 
           PolicyDocument:
@@ -59,28 +80,105 @@ Resources:
 
             Statement:
 
-              - Effect: Allow
+              # CloudFormation
+              - Sid: CloudFormation
+                Effect: Allow
                 Action:
                   - cloudformation:*
-                  - lambda:*
-                  - apigateway:*
+                Resource: "*"
+
+              # SAM deployment artifacts
+              # Broad for the POC.
+              # We will scope this later.
+              - Sid: SAMDeploymentBucket
+                Effect: Allow
+                Action:
                   - s3:*
-                  - logs:*
+                Resource: "*"
+
+              # Lambda
+              - Sid: Lambda
+                Effect: Allow
+                Action:
+                  - lambda:CreateFunction
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+                  - lambda:DeleteFunction
+                  - lambda:GetFunction
+                  - lambda:GetFunctionConfiguration
+                  - lambda:ListVersionsByFunction
+                  - lambda:PublishVersion
+                  - lambda:CreateAlias
+                  - lambda:UpdateAlias
+                  - lambda:DeleteAlias
+                  - lambda:GetAlias
+                  - lambda:AddPermission
+                  - lambda:RemovePermission
+                  - lambda:TagResource
+                  - lambda:UntagResource
+                Resource: "*"
+
+              # API Gateway
+              - Sid: APIGateway
+                Effect: Allow
+                Action:
+                  - apigateway:GET
+                  - apigateway:POST
+                  - apigateway:PUT
+                  - apigateway:PATCH
+                  - apigateway:DELETE
+                  - apigateway:TagResource
+                Resource: "*"
+
+              # IAM roles created by SAM/CloudFormation
+              - Sid: IAMForSAMGeneratedRoles
+                Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:GetRole
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:TagRole
+                  - iam:UntagRole
+                Resource: "*"
+
+              # Allow deployment role to pass
+              # Lambda execution roles.
+              - Sid: PassRoleToLambda
+                Effect: Allow
+                Action:
                   - iam:PassRole
                 Resource: "*"
+                Condition:
+                  StringEquals:
+                    iam:PassedToService:
+                      - lambda.amazonaws.com
+
+              # CloudWatch Logs
+              - Sid: CloudWatchLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DeleteLogGroup
+                  - logs:PutRetentionPolicy
+                  - logs:DeleteRetentionPolicy
+                  - logs:TagResource
+                Resource: "*"
+
 
 Outputs:
 
-  GitHubActionsRoleArn:
-    Description: IAM role ARN used by GitHub Actions through OIDC.
-    Value:
-      Fn::GetAtt:
-        - GitHubActionsRole
-        - Arn
+  DeploymentRoleArn:
+    Description: IAM role ARN to use in GitHub Actions.
+    Value: !GetAtt OpsifyDeploymentRole.Arn
 
-  GitHubOIDCProviderArn:
-    Description: GitHub OIDC provider ARN.
-    Value:
-      Fn::GetAtt:
-        - GitHubOIDCProvider
-        - Arn
+  DeploymentRoleName:
+    Description: IAM deployment role name.
+    Value: !Ref OpsifyDeploymentRole
+
+  GitHubSubject:
+    Description: GitHub OIDC subject trusted by the deployment role.
+    Value: !Sub "repo:${GitHubOwner}@${GitHubOwnerId}/${GitHubRepository}@${GitHubRepositoryId}:ref:refs/heads/${GitHubBranch}"
