@@ -42,7 +42,7 @@ Resources:
     Type: AWS::IAM::Role
 
     Properties:
-      RoleName: OpsifyDeploymentRole
+      RoleName: !Sub "OpsifyDeploymentRole-${GitHubRepositoryId}"
 
       Description: >
         IAM role assumed by GitHub Actions through GitHub OIDC
