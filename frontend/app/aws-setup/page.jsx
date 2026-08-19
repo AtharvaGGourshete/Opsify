@@ -6,7 +6,6 @@ const githubConfig = {
   repository: process.env.NEXT_PUBLIC_GITHUB_REPOSITORY,
   repositoryId: process.env.NEXT_PUBLIC_GITHUB_REPOSITORY_ID,
   branch: process.env.NEXT_PUBLIC_GITHUB_BRANCH,
-  oidcProviderArn: process.env.NEXT_PUBLIC_GITHUB_OIDC_PROVIDER_ARN,
 };
 
 function getCloudFormationLaunchUrl() {
@@ -19,7 +18,6 @@ function getCloudFormationLaunchUrl() {
     param_GitHubRepository: githubConfig.repository,
     param_GitHubRepositoryId: githubConfig.repositoryId,
     param_GitHubBranch: githubConfig.branch,
-    param_GitHubOIDCProviderArn: githubConfig.oidcProviderArn,
   });
 
   return `https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?${params.toString()}`;

@@ -1,8 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: >
-  Opsify AWS bootstrap. Creates the IAM deployment role
-  required for GitHub Actions OIDC deployments.
+  Opsify AWS bootstrap. Creates the GitHub Actions OIDC provider
+  and IAM deployment role required for Opsify deployments.
 
 Parameters:
 
@@ -31,12 +31,21 @@ Parameters:
     Description: GitHub branch allowed to deploy.
     Default: main
 
-  GitHubOIDCProviderArn:
-    Type: String
-    Description: ARN of the existing GitHub Actions OIDC provider.
-
 
 Resources:
+
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+
+      ClientIdList:
+        - sts.amazonaws.com
+
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+
 
   OpsifyDeploymentRole:
     Type: AWS::IAM::Role
@@ -56,7 +65,7 @@ Resources:
           - Effect: Allow
 
             Principal:
-              Federated: !Ref GitHubOIDCProviderArn
+              Federated: !Ref GitHubOIDCProvider
 
             Action:
               - sts:AssumeRoleWithWebIdentity
@@ -178,6 +187,10 @@ Outputs:
   DeploymentRoleName:
     Description: IAM deployment role name.
     Value: !Ref OpsifyDeploymentRole
+
+  GitHubOIDCProviderArn:
+    Description: GitHub Actions OIDC provider created by this stack.
+    Value: !Ref GitHubOIDCProvider
 
   GitHubSubject:
     Description: GitHub OIDC subject trusted by the deployment role.
