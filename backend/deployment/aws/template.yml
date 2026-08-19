@@ -1,17 +1,39 @@
 AWSTemplateFormatVersion: "2010-09-09"
+
 Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  Opsify POC application.
+  Deploys a simple Lambda function with an API Gateway endpoint.
 
 Resources:
 
   TestFunction:
     Type: AWS::Serverless::Function
+
     Properties:
+      FunctionName: OpsifyTestFunction
+
       Runtime: nodejs22.x
+
       Handler: app.handler
+
       CodeUri: src/
+
       Events:
         Api:
           Type: Api
           Properties:
             Path: /test
             Method: get
+
+
+Outputs:
+
+  ApiUrl:
+    Description: URL of the Opsify test API
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/test"
+
+  FunctionArn:
+    Description: ARN of the deployed Lambda function
+    Value: !GetAtt TestFunction.Arn

@@ -43,8 +43,12 @@ Resources:
       ClientIdList:
         - sts.amazonaws.com
 
+
   OpsifyDeploymentRole:
     Type: AWS::IAM::Role
+
+    DependsOn:
+      - GitHubOIDCProvider
 
     Properties:
       RoleName: !Sub "OpsifyDeploymentRole-${GitHubRepositoryId}"
@@ -57,17 +61,15 @@ Resources:
         Version: "2012-10-17"
 
         Statement:
-
           - Effect: Allow
 
             Principal:
-              Federated: !Ref GitHubOIDCProvider
+              Federated: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com"
 
             Action:
               - sts:AssumeRoleWithWebIdentity
 
             Condition:
-
               StringEquals:
 
                 token.actions.githubusercontent.com:aud:
@@ -75,6 +77,7 @@ Resources:
 
                 token.actions.githubusercontent.com:sub:
                   - !Sub "repo:${GitHubOwner}@${GitHubOwnerId}/${GitHubRepository}@${GitHubRepositoryId}:ref:refs/heads/${GitHubBranch}"
+
 
       Policies:
 
@@ -92,6 +95,7 @@ Resources:
                   - cloudformation:*
                 Resource: "*"
 
+
               # SAM deployment artifacts
               # Broad for the POC.
               # We will scope this later.
@@ -100,6 +104,7 @@ Resources:
                 Action:
                   - s3:*
                 Resource: "*"
+
 
               # Lambda
               - Sid: Lambda
@@ -123,6 +128,7 @@ Resources:
                   - lambda:UntagResource
                 Resource: "*"
 
+
               # API Gateway
               - Sid: APIGateway
                 Effect: Allow
@@ -134,6 +140,7 @@ Resources:
                   - apigateway:DELETE
                   - apigateway:TagResource
                 Resource: "*"
+
 
               # IAM roles created by SAM/CloudFormation
               - Sid: IAMForSAMGeneratedRoles
@@ -150,6 +157,7 @@ Resources:
                   - iam:UntagRole
                 Resource: "*"
 
+
               # Allow deployment role to pass
               # Lambda execution roles.
               - Sid: PassRoleToLambda
@@ -157,10 +165,12 @@ Resources:
                 Action:
                   - iam:PassRole
                 Resource: "*"
+
                 Condition:
                   StringEquals:
                     iam:PassedToService:
                       - lambda.amazonaws.com
+
 
               # CloudWatch Logs
               - Sid: CloudWatchLogs
@@ -180,13 +190,16 @@ Outputs:
     Description: IAM role ARN to use in GitHub Actions.
     Value: !GetAtt OpsifyDeploymentRole.Arn
 
+
   DeploymentRoleName:
     Description: IAM deployment role name.
     Value: !Ref OpsifyDeploymentRole
 
+
   GitHubOIDCProviderArn:
     Description: GitHub Actions OIDC provider created by this stack.
     Value: !Ref GitHubOIDCProvider
+
 
   GitHubSubject:
     Description: GitHub OIDC subject trusted by the deployment role.

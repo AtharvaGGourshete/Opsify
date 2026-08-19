@@ -1,8 +1,12 @@
-export const handler = async () => {
+exports.handler = async (event) => {
   return {
     statusCode: 200,
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({
-      message: "Opsify AWS SAM deployment works!"
+      message: "Hello from Opsify!",
+      deployed: true
     })
   };
 };
