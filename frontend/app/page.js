@@ -5,6 +5,8 @@ import SignOut from "@/components/auth/sign-out";
 export default async function Home() {
   const session = await auth();
 
+  console.log("GitHub ID:", session?.user?.githubId);
+
   if (!session?.user) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -14,8 +16,6 @@ export default async function Home() {
       </main>
     );
   }
-
-  console.log(session.user);
 
   return (
     <main className="min-h-screen flex items-center justify-center">
@@ -31,7 +31,7 @@ export default async function Home() {
 
           <div>
             <h1 className="text-xl font-semibold">{session.user.name}</h1>
-
+            <h2 className="text-xl font-semibold">Github ID: {session?.user?.githubId}</h2>
             <p className="text-gray-500">{session.user.email}</p>
           </div>
         </div>
