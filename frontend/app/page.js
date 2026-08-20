@@ -1,15 +1,12 @@
 import { auth } from "@/auth";
 import SignIn from "@/components/auth/sign-in";
-import SignOut from "@/components/auth/sign-out";
 
 export default async function Home() {
   const session = await auth();
 
-  console.log("GitHub ID:", session?.user?.githubId);
-
   if (!session?.user) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
+      <main className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <SignIn />
         </div>
@@ -18,27 +15,37 @@ export default async function Home() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <div className="w-full max-w-xl rounded-xl border p-6 shadow-sm flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {session.user.image && (
-            <img
-              src={session.user.image}
-              alt={session.user.name || "User"}
-              className="h-16 w-16 rounded-full"
-            />
-          )}
+    <main className="min-h-screen p-8 bg-white text-black">
+      <div className="mx-auto max-w-3xl space-y-8">
+        {/* User Card */}
+        {/* <div className="flex items-center justify-between rounded-xl border p-6 shadow-sm">
+          <div className="flex items-center gap-4">
+            {session.user.image && (
+              <img
+                src={session.user.image}
+                alt={session.user.name || "User"}
+                className="h-16 w-16 rounded-full"
+              />
+            )}
 
-          <div>
-            <h1 className="text-xl font-semibold">{session.user.name}</h1>
-            <h2 className="text-xl font-semibold">Github ID: {session?.user?.githubId}</h2>
-            <p className="text-gray-500">{session.user.email}</p>
+            <div>
+              <h1 className="text-xl font-semibold">
+                {session.user.name}
+              </h1>
+
+              <p className="text-sm text-gray-500">
+                {session.user.email}
+              </p>
+
+              <p className="mt-1 text-sm">
+                <span className="font-medium">GitHub ID:</span>{" "}
+                {session.user.githubId}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div>
           <SignOut />
-        </div>
+        </div> */}
       </div>
     </main>
   );
