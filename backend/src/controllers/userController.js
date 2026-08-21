@@ -46,6 +46,45 @@ export const loginViaGithub = async (req, res) => {
   }
 };
 
+export const getUserProfile = async (req, res) => {
+  try {
+    const { githubUserId } = req.params;
+
+    if (!githubUserId) {
+      return res.status(400).json({
+        success: false,
+        message: "GitHub user ID is required",
+      });
+    }
+
+    const result = await sql`
+      SELECT *
+      FROM public.aws_connections
+      WHERE github_user_id = ${githubUserId}
+      LIMIT 1;
+    `;
+
+    if (result.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User profile not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      profile: result[0],
+    });
+  } catch (error) {
+    console.error("Get user profile error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch user profile",
+    });
+  }
+};
+
 export const userAWSDetails = async (req, res) => {
   try {
     const {

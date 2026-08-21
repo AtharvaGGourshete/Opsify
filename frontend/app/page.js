@@ -183,11 +183,8 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#fafafa] text-neutral-900 selection:bg-neutral-900 selection:text-white">
-      
-      {/* =====================================================
-          HERO SECTION
-      ===================================================== */}
-      <section id="product" className="relative overflow-hidden px-6 pb-24 pt-32 md:pb-36 md:pt-40">
+    
+      <section id="product" className="relative overflow-hidden px-6 pb-24 md:pb-36 pt-10">
         
         {/* Soft Modern Glow */}
         <div className="pointer-events-none absolute left-1/2 top-16 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-neutral-200/60 blur-[120px]" />
@@ -203,17 +200,6 @@ export default async function Home() {
         />
 
         <div className="relative mx-auto max-w-7xl">
-          
-          {/* Badge */}
-          <div className="flex justify-center">
-            <Badge
-              variant="outline"
-              className="border-neutral-200 bg-white shadow-sm px-4 py-1.5 text-xs font-semibold text-neutral-600"
-            >
-              <span className="mr-2 h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
-              AI-Powered Cloud Deployment
-            </Badge>
-          </div>
 
           {/* Hero Heading */}
           <h1 className="mx-auto mt-8 max-w-6xl text-center text-[3.2rem] font-extrabold leading-[1] tracking-[-0.04em] sm:text-6xl md:text-7xl lg:text-[7rem]">

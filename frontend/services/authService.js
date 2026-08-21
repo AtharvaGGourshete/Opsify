@@ -18,8 +18,21 @@ export const saveGithubUser = async (githubData) => {
   return data;
 };
 
+export const getUserProfile = async (githubUserId) => {
+  const response = await fetch(`${API_URL}/api/users/${githubUserId}`, {
+    cache: "no-store",
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch user profile");
+  }
+
+  return data;
+};
+
 export const saveAWSDetails = async (awsData) => {
-  const response = await fetch(`${API_URL}/api/auth/aws`, {
+  const response = await fetch(`${API_URL}/api/aws-details`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
