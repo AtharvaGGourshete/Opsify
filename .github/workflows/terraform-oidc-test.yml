@@ -24,3 +24,20 @@ jobs:
       - name: Verify AWS identity
         run: |
           aws sts get-caller-identity
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: backend/deployment/terraform/test-app
+        run: terraform init 
+
+      - name: Terraform Validate
+        working-directory: backend/deployment/terraform/test-app
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: backend/deployment/terraform/test-app
+        run: |
+          terraform plan \
+            -var="container_image=862205457196.dkr.ecr.ap-south-1.amazonaws.com/opsify-test-app:v1"
