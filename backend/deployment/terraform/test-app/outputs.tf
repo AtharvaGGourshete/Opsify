@@ -24,3 +24,15 @@ output "ecs_task_execution_role_arn" {
 output "cloudwatch_log_group_name" {
   value = aws_cloudwatch_log_group.app.name
 }
+
+output "ecs_task_definition_arn" {
+  value = aws_ecs_task_definition.app.arn
+}
+
+output "ecs_service_name" {
+  value = aws_ecs_service.app.name
+}
+
+output "load_balancer_dns_name" {
+  value = aws_lb.app.dns_name
+}
