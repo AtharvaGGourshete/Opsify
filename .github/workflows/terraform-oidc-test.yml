@@ -46,6 +46,7 @@ jobs:
         env:
           AWS_REGION: ap-south-1
           PROJECT_NAME: opsify-test-app
+          TF_VAR_container_image: 862205457196.dkr.ecr.ap-south-1.amazonaws.com/opsify-test-app:v1
         run: |
           set -e
 
