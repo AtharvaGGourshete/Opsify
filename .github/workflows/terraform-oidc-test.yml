@@ -36,8 +36,22 @@ jobs:
         working-directory: backend/deployment/terraform/test-app
         run: terraform validate
 
-      - name: Terraform Plan
+      - name: Terraform Apply
         working-directory: backend/deployment/terraform/test-app
         run: |
-          terraform plan \
+          terraform apply \
+            -auto-approve \
             -var="container_image=862205457196.dkr.ecr.ap-south-1.amazonaws.com/opsify-test-app:v1"
+
+      - name: Show deployment information
+        working-directory: backend/deployment/terraform/test-app
+        run: |
+          echo "========================================"
+          echo "Opsify deployment completed"
+          echo "========================================"
+
+          echo "Load Balancer:"
+          terraform output -raw load_balancer_dns_name
+
+          echo "Application URL:"
+          echo "http://$(terraform output -raw load_balancer_dns_name)"
