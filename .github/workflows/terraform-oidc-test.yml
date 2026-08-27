@@ -41,7 +41,7 @@ jobs:
       # The GitHub runner starts with an empty Terraform state,
       # so we discover existing AWS resources and import them.
       # ---------------------------------------------------------
-            - name: Import existing AWS resources
+      - name: Import existing AWS resources
         working-directory: backend/deployment/terraform/test-app
         env:
           AWS_REGION: ap-south-1
