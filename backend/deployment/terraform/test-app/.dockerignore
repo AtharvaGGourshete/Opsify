@@ -1,10 +1,5 @@
 node_modules
 npm-debug.log
-.terraform
-.terraform.lock.hcl
-terraform.tfstate
-terraform.tfstate.*
-*.tf
-.env
 .git
 .gitignore
+.env
