@@ -41,7 +41,7 @@ jobs:
       # The GitHub runner starts with an empty Terraform state,
       # so we discover existing AWS resources and import them.
       # ---------------------------------------------------------
-      - name: Import existing AWS resources
+            - name: Import existing AWS resources
         working-directory: backend/deployment/terraform/test-app
         env:
           AWS_REGION: ap-south-1
@@ -54,119 +54,151 @@ jobs:
           echo "Discovering existing AWS resources"
           echo "========================================"
 
+          # -------------------------------------------------------
+          # VPC
+          # -------------------------------------------------------
           VPC_ID=$(aws ec2 describe-vpcs \
             --region "$AWS_REGION" \
             --filters "Name=tag:Name,Values=${PROJECT_NAME}-vpc" \
             --query 'Vpcs[0].VpcId' \
-            --output text)
+            --output text 2>/dev/null || echo "None")
 
           if [ "$VPC_ID" != "None" ] && [ -n "$VPC_ID" ]; then
             echo "VPC: $VPC_ID"
             terraform import aws_vpc.main "$VPC_ID" || true
           fi
 
+
+          # -------------------------------------------------------
+          # Internet Gateway
+          # -------------------------------------------------------
           IGW_ID=$(aws ec2 describe-internet-gateways \
             --region "$AWS_REGION" \
             --filters "Name=tag:Name,Values=${PROJECT_NAME}-igw" \
             --query 'InternetGateways[0].InternetGatewayId' \
-            --output text)
+            --output text 2>/dev/null || echo "None")
 
           if [ "$IGW_ID" != "None" ] && [ -n "$IGW_ID" ]; then
             echo "Internet Gateway: $IGW_ID"
             terraform import aws_internet_gateway.main "$IGW_ID" || true
           fi
 
+
+          # -------------------------------------------------------
+          # Public subnet A
+          # -------------------------------------------------------
           SUBNET_A=$(aws ec2 describe-subnets \
             --region "$AWS_REGION" \
             --filters "Name=tag:Name,Values=${PROJECT_NAME}-public-a" \
             --query 'Subnets[0].SubnetId' \
-            --output text)
+            --output text 2>/dev/null || echo "None")
 
           if [ "$SUBNET_A" != "None" ] && [ -n "$SUBNET_A" ]; then
             echo "Public subnet A: $SUBNET_A"
             terraform import aws_subnet.public_a "$SUBNET_A" || true
           fi
 
+
+          # -------------------------------------------------------
+          # Public subnet B
+          # -------------------------------------------------------
           SUBNET_B=$(aws ec2 describe-subnets \
             --region "$AWS_REGION" \
             --filters "Name=tag:Name,Values=${PROJECT_NAME}-public-b" \
             --query 'Subnets[0].SubnetId' \
-            --output text)
+            --output text 2>/dev/null || echo "None")
 
           if [ "$SUBNET_B" != "None" ] && [ -n "$SUBNET_B" ]; then
             echo "Public subnet B: $SUBNET_B"
             terraform import aws_subnet.public_b "$SUBNET_B" || true
           fi
 
+
+          # -------------------------------------------------------
+          # Route table
+          # -------------------------------------------------------
           ROUTE_TABLE=$(aws ec2 describe-route-tables \
             --region "$AWS_REGION" \
             --filters "Name=tag:Name,Values=${PROJECT_NAME}-public-rt" \
             --query 'RouteTables[0].RouteTableId' \
-            --output text)
+            --output text 2>/dev/null || echo "None")
 
           if [ "$ROUTE_TABLE" != "None" ] && [ -n "$ROUTE_TABLE" ]; then
             echo "Route table: $ROUTE_TABLE"
             terraform import aws_route_table.public "$ROUTE_TABLE" || true
           fi
 
-          if [ "$ROUTE_TABLE" != "None" ] && [ -n "$ROUTE_TABLE" ]; then
 
-            ASSOC_A=$(aws ec2 describe-route-tables \
-              --region "$AWS_REGION" \
-              --route-table-ids "$ROUTE_TABLE" \
-              --query "RouteTables[0].Associations[?SubnetId=='$SUBNET_A'].RouteTableAssociationId" \
-              --output text)
-
-            if [ "$ASSOC_A" != "None" ] && [ -n "$ASSOC_A" ]; then
-              echo "Route association A: $ASSOC_A"
-              terraform import aws_route_table_association.public_a "$ASSOC_A" || true
-            fi
-
-            ASSOC_B=$(aws ec2 describe-route-tables \
-              --region "$AWS_REGION" \
-              --route-table-ids "$ROUTE_TABLE" \
-              --query "RouteTables[0].Associations[?SubnetId=='$SUBNET_B'].RouteTableAssociationId" \
-              --output text)
-
-            if [ "$ASSOC_B" != "None" ] && [ -n "$ASSOC_B" ]; then
-              echo "Route association B: $ASSOC_B"
-              terraform import aws_route_table_association.public_b "$ASSOC_B" || true
-            fi
+          # -------------------------------------------------------
+          # Route table associations
+          #
+          # IMPORTANT:
+          # aws_route_table_association import format is:
+          # subnet-id/route-table-id
+          # -------------------------------------------------------
+          if [ "$SUBNET_A" != "None" ] && [ "$ROUTE_TABLE" != "None" ]; then
+            echo "Route association A: ${SUBNET_A}/${ROUTE_TABLE}"
+            terraform import \
+              aws_route_table_association.public_a \
+              "${SUBNET_A}/${ROUTE_TABLE}" || true
           fi
 
+          if [ "$SUBNET_B" != "None" ] && [ "$ROUTE_TABLE" != "None" ]; then
+            echo "Route association B: ${SUBNET_B}/${ROUTE_TABLE}"
+            terraform import \
+              aws_route_table_association.public_b \
+              "${SUBNET_B}/${ROUTE_TABLE}" || true
+          fi
+
+
+          # -------------------------------------------------------
+          # ALB security group
+          # -------------------------------------------------------
           ALB_SG=$(aws ec2 describe-security-groups \
             --region "$AWS_REGION" \
             --filters "Name=group-name,Values=${PROJECT_NAME}-alb-sg" \
             --query 'SecurityGroups[0].GroupId' \
-            --output text)
+            --output text 2>/dev/null || echo "None")
 
           if [ "$ALB_SG" != "None" ] && [ -n "$ALB_SG" ]; then
             echo "ALB security group: $ALB_SG"
             terraform import aws_security_group.alb "$ALB_SG" || true
           fi
 
+
+          # -------------------------------------------------------
+          # ECS security group
+          # -------------------------------------------------------
           ECS_SG=$(aws ec2 describe-security-groups \
             --region "$AWS_REGION" \
             --filters "Name=group-name,Values=${PROJECT_NAME}-ecs-sg" \
             --query 'SecurityGroups[0].GroupId' \
-            --output text)
+            --output text 2>/dev/null || echo "None")
 
           if [ "$ECS_SG" != "None" ] && [ -n "$ECS_SG" ]; then
             echo "ECS security group: $ECS_SG"
             terraform import aws_security_group.ecs "$ECS_SG" || true
           fi
 
+
+          # -------------------------------------------------------
+          # ECS cluster
+          # -------------------------------------------------------
           CLUSTER=$(aws ecs describe-clusters \
             --region "$AWS_REGION" \
             --clusters "${PROJECT_NAME}-cluster" \
             --query 'clusters[0].clusterName' \
-            --output text)
+            --output text 2>/dev/null || echo "None")
 
           if [ "$CLUSTER" != "None" ] && [ -n "$CLUSTER" ]; then
             echo "ECS cluster: $CLUSTER"
             terraform import aws_ecs_cluster.main "$CLUSTER" || true
           fi
 
+
+          # -------------------------------------------------------
+          # IAM execution role
+          # -------------------------------------------------------
           ROLE_NAME="${PROJECT_NAME}-ecs-task-execution-role"
 
           if aws iam get-role \
@@ -184,20 +216,27 @@ jobs:
               --role-name "$ROLE_NAME" \
               --policy-name "$POLICY_NAME" >/dev/null 2>&1; then
 
+              echo "IAM execution policy: $POLICY_NAME"
+
               terraform import \
                 aws_iam_role_policy.ecs_task_execution \
                 "${ROLE_NAME}:${POLICY_NAME}" || true
             fi
           fi
 
+
+          # -------------------------------------------------------
+          # CloudWatch log group
+          # -------------------------------------------------------
           LOG_GROUP="/opsify/${PROJECT_NAME}"
 
-          if aws logs describe-log-groups \
+          LOG_GROUP_EXISTS=$(aws logs describe-log-groups \
             --region "$AWS_REGION" \
             --log-group-name-prefix "$LOG_GROUP" \
             --query "logGroups[?logGroupName=='$LOG_GROUP'] | length(@)" \
-            --output text | grep -q '^1$'; then
+            --output text 2>/dev/null || echo "0")
 
+          if [ "$LOG_GROUP_EXISTS" = "1" ]; then
             echo "CloudWatch log group: $LOG_GROUP"
 
             terraform import \
@@ -205,11 +244,15 @@ jobs:
               "$LOG_GROUP" || true
           fi
 
+
+          # -------------------------------------------------------
+          # Target group
+          # -------------------------------------------------------
           TG_ARN=$(aws elbv2 describe-target-groups \
             --region "$AWS_REGION" \
             --names "${PROJECT_NAME}-tg" \
             --query 'TargetGroups[0].TargetGroupArn' \
-            --output text)
+            --output text 2>/dev/null || echo "None")
 
           if [ "$TG_ARN" != "None" ] && [ -n "$TG_ARN" ]; then
             echo "Target group: $TG_ARN"
@@ -219,11 +262,18 @@ jobs:
               "$TG_ARN" || true
           fi
 
+
+          # -------------------------------------------------------
+          # Application Load Balancer
+          #
+          # It may not exist because the previous deployment failed.
+          # If it doesn't exist, Terraform will create it later.
+          # -------------------------------------------------------
           LB_ARN=$(aws elbv2 describe-load-balancers \
             --region "$AWS_REGION" \
             --names "${PROJECT_NAME}-alb" \
             --query 'LoadBalancers[0].LoadBalancerArn' \
-            --output text)
+            --output text 2>/dev/null || echo "None")
 
           if [ "$LB_ARN" != "None" ] && [ -n "$LB_ARN" ]; then
             echo "Load balancer: $LB_ARN"
@@ -236,7 +286,7 @@ jobs:
               --region "$AWS_REGION" \
               --load-balancer-arn "$LB_ARN" \
               --query 'Listeners[?Port==`80`].ListenerArn | [0]' \
-              --output text)
+              --output text 2>/dev/null || echo "None")
 
             if [ "$LISTENER_ARN" != "None" ] && [ -n "$LISTENER_ARN" ]; then
               echo "HTTP listener: $LISTENER_ARN"
@@ -245,15 +295,21 @@ jobs:
                 aws_lb_listener.http \
                 "$LISTENER_ARN" || true
             fi
+          else
+            echo "ALB does not exist yet. Terraform will create it."
           fi
 
+
+          # -------------------------------------------------------
+          # Task definition
+          # -------------------------------------------------------
           TASK_DEF=$(aws ecs list-task-definitions \
             --region "$AWS_REGION" \
             --family-prefix "$PROJECT_NAME" \
             --status ACTIVE \
             --sort DESC \
             --query 'taskDefinitionArns[0]' \
-            --output text)
+            --output text 2>/dev/null || echo "None")
 
           if [ "$TASK_DEF" != "None" ] && [ -n "$TASK_DEF" ]; then
             echo "Task definition: $TASK_DEF"
@@ -263,6 +319,10 @@ jobs:
               "$TASK_DEF" || true
           fi
 
+
+          # -------------------------------------------------------
+          # ECS service
+          # -------------------------------------------------------
           SERVICE_NAME="${PROJECT_NAME}-service"
 
           SERVICE_ARN=$(aws ecs describe-services \
@@ -270,7 +330,7 @@ jobs:
             --cluster "${PROJECT_NAME}-cluster" \
             --services "$SERVICE_NAME" \
             --query 'services[0].serviceArn' \
-            --output text)
+            --output text 2>/dev/null || echo "None")
 
           if [ "$SERVICE_ARN" != "None" ] && [ -n "$SERVICE_ARN" ]; then
             echo "ECS service: $SERVICE_NAME"
@@ -280,13 +340,13 @@ jobs:
               "${PROJECT_NAME}-cluster/${SERVICE_NAME}" || true
           fi
 
+
           echo
           echo "========================================"
           echo "Terraform state after imports"
           echo "========================================"
 
           terraform state list || true
-
       - name: Terraform Plan
         working-directory: backend/deployment/terraform/test-app
         run: |
