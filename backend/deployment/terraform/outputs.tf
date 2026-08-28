@@ -36,3 +36,8 @@ output "ecs_service_name" {
 output "load_balancer_dns_name" {
   value = aws_lb.app.dns_name
 }
+
+output "ecr_repository_url" {
+  description = "ECR repository URL for the application"
+  value       = aws_ecr_repository.app.repository_url
+}

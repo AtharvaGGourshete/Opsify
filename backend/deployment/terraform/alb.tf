@@ -20,7 +20,7 @@ resource "aws_lb" "app" {
 
 resource "aws_lb_target_group" "app" {
   name        = "${var.project_name}-tg"
-  port        = 7000
+  port        = var.container_port
   protocol    = "HTTP"
   target_type = "ip"
   vpc_id      = aws_vpc.main.id
@@ -29,7 +29,7 @@ resource "aws_lb_target_group" "app" {
     enabled             = true
     path                = "/"
     protocol            = "HTTP"
-    port                = "7000"
+    port                = tostring(var.container_port)
     healthy_threshold   = 2
     unhealthy_threshold = 3
     timeout             = 5

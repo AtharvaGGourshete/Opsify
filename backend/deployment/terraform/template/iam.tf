@@ -50,7 +50,7 @@ resource "aws_iam_role_policy" "ecs_task_execution" {
           "ecr:BatchGetImage"
         ]
 
-        Resource = "arn:aws:ecr:${var.aws_region}:862205457196:repository/opsify-test-app"
+        Resource = var.ecr_repository_arn
       },
 
       {

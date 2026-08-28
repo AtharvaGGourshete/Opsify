@@ -26,8 +26,8 @@ resource "aws_ecs_task_definition" "app" {
 
       portMappings = [
         {
-          containerPort = 7000
-          hostPort      = 7000
+          containerPort = var.container_port
+          hostPort      = var.container_port
           protocol      = "tcp"
         }
       ]
@@ -55,7 +55,7 @@ resource "aws_ecs_service" "app" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn
 
-  desired_count = 1
+  desired_count = var.desired_count
   launch_type   = "FARGATE"
 
   network_configuration {
@@ -74,7 +74,7 @@ resource "aws_ecs_service" "app" {
   load_balancer {
     target_group_arn = aws_lb_target_group.app.arn
     container_name   = var.project_name
-    container_port   = 7000
+    container_port   = var.container_port
   }
 
   tags = {

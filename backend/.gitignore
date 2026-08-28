@@ -5,3 +5,7 @@ node_modules/
 .terraform/
 *.tfstate
 *.tfstate.*
+*.tfvars
+*.tfvars.json
+.terraform/
+testContainerBuilder.js

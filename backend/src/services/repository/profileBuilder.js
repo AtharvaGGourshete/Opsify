@@ -45,7 +45,8 @@ export function buildRepositoryProfile({
       version: pkg.version,
       packageManager: pkg.packageManager,
       production: Object.keys(pkg.dependencies || {}),
-      development: Object.keys(pkg.devDependencies || {})
+      development: Object.keys(pkg.devDependencies || {}),
+      scripts: pkg.scripts || {}
     })),
 
     databases,

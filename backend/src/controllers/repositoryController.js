@@ -11,6 +11,7 @@ import { detectDatabases } from "../services/repository/detectors/databaseDetect
 import { detectInfrastructure } from "../services/repository/detectors/infrastructureDetector.js";
 import { buildRepositoryProfile } from "../services/repository/profileBuilder.js";
 import { generateRepositoryContext } from "../services/repository/context/repomix.js";
+import { createDeploymentSpecification } from "../services/deployment/deploymentPlanner.js";
 
 function isValidGitHubUrl(url) {
   try {
@@ -48,7 +49,7 @@ export async function analyzeRepository(req, res) {
     const languages = detectLanguages(files);
     const packageData = await findPackageFiles(repoPath, files);
     const frameworks = detectJavaScriptFrameworks(packageData);
-    const applications = detectApplications(frameworks,packageData);
+    const applications = detectApplications(frameworks, packageData);
     const databases = detectDatabases(packageData);
     const infrastructure = detectInfrastructure(files);
     const repositoryContext = await generateRepositoryContext(repoPath);
@@ -62,7 +63,7 @@ export async function analyzeRepository(req, res) {
       databases,
       infrastructure
     });
-
+    console.log(JSON.stringify(profile, null, 2));
     return res.status(200).json({
       profile,
       context: repositoryContext.context
@@ -76,5 +77,50 @@ export async function analyzeRepository(req, res) {
     });
   } finally {
     await cleanupRepository(repoPath);
+  }
+}
+
+export async function createDeploymentPlan(req, res) {
+  const {
+    profile,
+    applicationDirectory,
+    port
+  } = req.body;
+
+  if (!profile) {
+    return res.status(400).json({
+      error: "Repository profile is required."
+    });
+  }
+
+  if (!applicationDirectory) {
+    return res.status(400).json({
+      error: "Application directory is required."
+    });
+  }
+
+  if (port === undefined || port === null || port === "") {
+    return res.status(400).json({
+      error: "Application port is required."
+    });
+  }
+
+  try {
+    const deployment = createDeploymentSpecification({
+      profile,
+      applicationDirectory,
+      port
+    });
+
+    return res.status(200).json({
+      deployment
+    });
+  } catch (error) {
+    console.error("Deployment planning failed:", error);
+
+    return res.status(400).json({
+      error: "Deployment planning failed.",
+      message: error.message
+    });
   }
 }
