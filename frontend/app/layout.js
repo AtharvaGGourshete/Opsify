@@ -4,6 +4,7 @@ import "./globals.css";
 import SyncGithubUser from "@/components/auth/SyncGithubUser";
 import { SessionProvider } from "next-auth/react";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 const geist = Geist({
   variable: "--font-geist",
@@ -33,6 +34,7 @@ export default function RootLayout({ children }) {
           <SyncGithubUser />
           <Navbar />
           {children}
+          <Footer/>
         </SessionProvider>
       </body>
     </html>

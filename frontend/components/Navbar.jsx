@@ -1,29 +1,133 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Menu, X, User } from "lucide-react";
 import SignIn from "@/components/auth/sign-in";
 import SignOut from "./auth/sign-out";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 export default function Navbar() {
+  const [navbarTheme, setNavbarTheme] = useState("teal");
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false); // Added state for controlling the dialog
   const { data: session } = useSession();
+
+  useEffect(() => {
+    const sections = document.querySelectorAll(
+      "[data-navbar-theme]"
+    );
+
+    if (!sections.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleSections = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort(
+            (a, b) =>
+              b.intersectionRatio - a.intersectionRatio
+          );
+
+        if (visibleSections.length > 0) {
+          const theme =
+            visibleSections[0].target.dataset.navbarTheme;
+
+          setNavbarTheme(theme);
+        }
+      },
+      {
+        threshold: [0.15, 0.3, 0.5, 0.7],
+        rootMargin: "-64px 0px -35% 0px",
+      }
+    );
+
+    sections.forEach((section) => observer.observe(section));
+
+    return () => observer.disconnect();
+  }, []);
+
+  const navbarThemes = {
+    teal: {
+      background: "bg-[#58a4b0]",
+      text: "text-black",
+      hover: "hover:bg-black/10",
+    },
+
+    light: {
+      background: "bg-[#cdedf6]",
+      text: "text-black",
+      hover: "hover:bg-black/10",
+    },
+
+    white: {
+      background: "bg-white",
+      text: "text-black",
+      hover: "hover:bg-black/5",
+    },
+  };
+
+  const currentTheme =
+    navbarThemes[navbarTheme] || navbarThemes.teal;
 
   if (!session?.user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-black text-white">
-        <div className="text-center">
-          <SignIn />
+      <header
+        className={`sticky top-0 z-50 w-full ${currentTheme.background} ${currentTheme.text} border-b border-black/5 backdrop-blur-xl transition-colors duration-500`}
+      >
+        <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-8">
+          {/* Logo */}
+          <div className="flex w-1/4 items-center justify-start">
+            <Link href="/" className="flex items-center space-x-2 text-black">
+              <span className="text-3xl font-bold tracking-tight">Opsify</span>
+            </Link>
+          </div>
+
+
+          {/* Sign In */}
+          <div className="flex w-1/4 items-center justify-end">
+            <AlertDialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="cursor-pointer">
+                  Sign In
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Sign in to Opsify</AlertDialogTitle>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>
+                    <span className="cursor-pointer">Cancel</span>
+                  </AlertDialogCancel>
+                  <AlertDialogAction asChild>
+                    <SignIn />
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
-      </main>
+      </header>
     );
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#fafafa] text-black">
+    <header
+      className={`sticky top-0 z-50 w-full ${currentTheme.background} ${currentTheme.text} border-b border-black/5 backdrop-blur-xl transition-colors duration-500`}
+    >
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-8">
         {/* Logo */}
         <div className="flex w-1/4 items-center justify-start">
@@ -32,44 +136,43 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden w-1/2 items-center justify-center gap-8 text-sm font-medium md:flex">
-          <Link
-            href="/deploy"
-            className="text-black transition-colors hover:text-black/70 text-lg"
-          >
-            Deploy
-          </Link>
-
-          <Link
-            href="/aws-setup"
-            className="text-black transition-colors hover:text-black/70 text-lg"
-          >
-            Launch Cloudformation
-          </Link>
-        </nav>
-
         {/* Profile */}
         <div className="hidden w-1/4 items-center justify-end md:flex">
           <div className="relative">
+            {/* Dropdown Trigger */}
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center gap-2 rounded-full p-1 text-white transition focus:outline-none"
+              className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-gray-100 transition"
             >
-              <Link href={"/profile"}>
-                <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full text-sm font-semibold text-white">
-                  {session.user.image ? (
-                    <img
-                      src={session.user.image}
-                      className="h-full w-full cursor-pointer object-cover"
-                    />
-                  ) : (
-                    <User className="h-4 w-4 text-white/70" />
-                  )}
-                </div>
-              </Link>
-              <SignOut />
+              {session.user.image ? (
+                <img
+                  src={session.user.image}
+                  className="h-full w-full cursor-pointer object-cover"
+                  alt="Profile"
+                />
+              ) : (
+                <User className="h-5 w-5 text-gray-600" />
+              )}
             </button>
+
+            {/* Dropdown Menu */}
+            {dropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 origin-top-right rounded-md border border-gray-200 bg-white px-1 py-1 shadow-lg ring-1 ring-black ring-opacity-5 justify-center">
+                <Link
+                  href="/profile"
+                  onClick={() => setDropdownOpen(false)}
+                  className="block px-4 py-2 text-sm transition-colors flex items-center gap-1 rounded-md text-black hover:bg-[#58a4b0] cursor-pointer"
+                >
+                  <User size={15} />Profile
+                </Link>
+                <div
+                  className="block cursor-pointer px-4 py-2 text-sm text-gray-700 transition-colors rounded-md hover:bg-red-500"
+                  onClick={() => setDropdownOpen(false)}
+                >
+                  <SignOut />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -77,7 +180,7 @@ export default function Navbar() {
         <div className="flex md:hidden">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="inline-flex items-center justify-center rounded-md p-2 text-white/70 transition hover:bg-white/10 hover:text-white focus:outline-none"
+            className="inline-flex items-center justify-center rounded-md p-2 text-black/70 transition hover:bg-black/10 hover:text-black focus:outline-none"
           >
             {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -86,24 +189,32 @@ export default function Navbar() {
 
       {/* Mobile Navigation */}
       {isOpen && (
-        <div className="space-y-3 border-b border-white/10 bg-black px-4 pb-6 pt-2 md:hidden">
+        <div className="space-y-3 border-b border-white/10 bg-[#fafafa] px-4 pb-6 pt-2 md:hidden">
           <Link
             href="/dashboard"
-            className="block rounded-md px-3 py-2 text-base font-medium text-white transition hover:bg-white/10"
+            className="block rounded-md px-3 py-2 text-base font-medium text-black transition hover:bg-black/5"
             onClick={() => setIsOpen(false)}
           >
             Dashboard
           </Link>
 
           <Link
+            href="/profile"
+            className="block rounded-md px-3 py-2 text-base font-medium text-black transition hover:bg-black/5"
+            onClick={() => setIsOpen(false)}
+          >
+            Profile
+          </Link>
+
+          <Link
             href="/aws-setup"
-            className="block rounded-md px-3 py-2 text-base font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+            className="block rounded-md px-3 py-2 text-base font-medium text-black/70 transition hover:bg-black/5 hover:text-black"
             onClick={() => setIsOpen(false)}
           >
             Launch Cloudformation
           </Link>
 
-          <div className="border-t border-white/10 pt-3">
+          <div className="border-t border-black/10 pt-3 px-3">
             <SignOut />
           </div>
         </div>

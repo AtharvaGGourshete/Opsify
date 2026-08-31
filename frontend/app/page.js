@@ -3,6 +3,8 @@ import SignIn from "@/components/auth/sign-in";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { Cable } from "lucide-react";
 
 const features = [
   {
@@ -182,12 +184,12 @@ export default async function Home() {
   const session = await auth();
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#fafafa] text-neutral-900 selection:bg-neutral-900 selection:text-white">
-    
-      <section id="product" className="relative overflow-hidden px-6 pb-24 md:pb-36 pt-10">
-        
+    <main className="min-h-screen">
+
+      <section id="product" data-navbar-theme="teal" className="bg-[#58a4b0] relative overflow-hidden px-6 pb-24 md:pb-36 pt-10">
+
         {/* Soft Modern Glow */}
-        <div className="pointer-events-none absolute left-1/2 top-16 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-neutral-200/60 blur-[120px]" />
+        <div className="pointer-events-none absolute left-1/2 top-10 h-[500px] w-[800px] -translate-x-1/2 rounded-full" />
 
         {/* Clean Light Subtle Grid */}
         <div
@@ -202,71 +204,51 @@ export default async function Home() {
         <div className="relative mx-auto max-w-7xl">
 
           {/* Hero Heading */}
-          <h1 className="mx-auto mt-8 max-w-6xl text-center text-[3.2rem] font-extrabold leading-[1] tracking-[-0.04em] sm:text-6xl md:text-7xl lg:text-[7rem]">
-            <span className="block text-neutral-900">From code.</span>
-            <span className="block text-neutral-400">To cloud.</span>
-            <span className="block text-neutral-900">Automatically.</span>
+          <h1 className="mx-auto max-w-6xl text-center text-[3.2rem] font-extrabold leading-[1] tracking-[-0.04em] sm:text-6xl md:text-7xl lg:text-[7rem]">
+            <span className="block text-black">From code.</span>
+            <span className="block text-white">To cloud.</span>
+            <span className="block text-black">Automatically.</span>
           </h1>
 
           {/* Description */}
-          <p className="mx-auto mt-8 max-w-2xl text-center text-base font-normal leading-7 text-neutral-600 md:text-lg md:leading-8">
-            Deploy your GitHub projects straight to production without becoming a DevOps expert. 
-            <strong className="font-semibold text-neutral-900"> Opsify manages the infrastructure layer.</strong>
+          <p className="mx-auto mt-8 max-w-xl text-center text-base font-normal leading-7 text-white md:text-lg md:leading-8">
+            Deploy your GitHub projects straight to production without becoming a DevOps expert.
           </p>
 
           {/* Call to Actions */}
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button
-              asChild
-              size="lg"
-              className="h-12 w-60 rounded-xl bg-neutral-900 px-6 text-sm font-bold text-white shadow-lg shadow-neutral-900/10 hover:bg-neutral-800 transition-all"
-            >
-              <a href="#get-started">
-                <div className="flex items-center gap-2">
-                  Deploy your first app
-                  <ArrowRight />
-                </div>
-              </a>
-            </Button>
-
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="h-12 rounded-xl border-neutral-200 bg-white px-6 text-sm font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50 hover:text-neutral-900 transition-all"
-            >
-              <a href="#how-it-works">See how it works</a>
-            </Button>
+            <Link href="/aws-setup">
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-12 rounded-xl border-neutral-200 bg-white px-6 text-sm font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50 hover:text-neutral-900 transition-all cursor-pointer"
+              ><Cable />Connect to AWS
+              </Button>
+            </Link>
+            <Link href="/deploy">
+              <Button
+                asChild
+                size="lg"
+                className="h-12 w-60 rounded-xl bg-neutral-900 px-6 text-sm font-bold text-white shadow-lg shadow-neutral-900/10 hover:bg-neutral-800 transition-all"
+              >
+                <a href="#get-started">
+                  <div className="flex items-center gap-2">
+                    Deploy your first app
+                    <ArrowRight />
+                  </div>
+                </a>
+              </Button>
+            </Link>
           </div>
 
-          {/* Trust Text */}
-          <p className="mt-6 text-center text-xs font-medium text-neutral-400 tracking-wide uppercase">
-            Your Cloud Account · Your Infrastructure · Complete Control
-          </p>
-
-          {/* =====================================================
-              PRODUCT PREVIEW CARD
-          ===================================================== */}
           <div className="relative mx-auto mt-20 max-w-5xl">
             <Card className="relative overflow-hidden rounded-2xl border-neutral-200/80 bg-white shadow-xl shadow-neutral-200/50">
-              
-              {/* Window Bar */}
-              <div className="flex h-12 items-center justify-between border-b border-neutral-100 bg-neutral-50/50 px-5">
-                <div className="flex gap-1.5">
-                  <span className="h-3 w-3 rounded-full bg-neutral-200" />
-                  <span className="h-3 w-3 rounded-full bg-neutral-200" />
-                  <span className="h-3 w-3 rounded-full bg-neutral-200" />
-                </div>
-                <span className="font-mono text-[11px] font-semibold text-neutral-400 tracking-wider">
-                  OPSIFY_CLI_v2.4
-                </span>
-                <div className="w-8" />
-              </div>
 
               <div className="grid md:grid-cols-[1.2fr_1fr]">
-                
+
                 {/* Terminal Side */}
-                <CardContent className="border-b border-neutral-100 p-6 md:border-b-0 md:border-r md:p-8 bg-neutral-900 text-neutral-100">
+                <CardContent className="border-l rounded-md ml-3 border-neutral-100 p-6 md:border-b-0 md:border-r md:p-8 bg-neutral-900 text-neutral-100 ">
                   <div className="mb-6 flex items-center gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-800 text-white">
                       <GitHubLogo />
@@ -311,7 +293,6 @@ export default async function Home() {
                   <div>
                     <div className="mb-6 flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Configuration</p>
                         <h3 className="mt-1 text-lg font-bold text-neutral-900">Stack Ready</h3>
                       </div>
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">
@@ -344,11 +325,8 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* =========================================================
-          TECHNOLOGY STRIP
-      ========================================================= */}
-      <section className="border-y border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-12 gap-y-6 px-6 py-6 text-xs font-bold text-neutral-400 tracking-wider uppercase">
+      <section id="technologies" data-navbar-theme="white" className="border-y border-neutral-200 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-12 gap-y-6 px-6 py-6 text-xs font-bold text-black tracking-wider uppercase">
           <span className="flex items-center gap-2"><GitHubLogo className="h-4 w-4" /> GitHub</span>
           <span className="flex items-center gap-2"><CloudIcon /> AWS Cloud</span>
           <span className="flex items-center gap-2"><TerminalIcon /> Actions OIDC</span>
@@ -357,17 +335,11 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* =========================================================
-          HOW IT WORKS
-      ========================================================= */}
-      <section id="how-it-works" className="px-6 py-28 md:py-36 bg-[#fafafa]">
+      <section id="how-it-works" data-navbar-theme="light" className="bg-[#cdedf6] px-6 py-28 md:py-36">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-3xl">
-            <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.2em] text-neutral-400">
-              Workflow Guide
-            </p>
-            <h2 className="text-3xl font-extrabold tracking-tight text-neutral-900 md:text-5xl">
-              Production ready in <span className="text-neutral-400">three clear steps.</span>
+            <h2 className="text-3xl font-extrabold tracking-tight text-black md:text-5xl">
+              Production ready in three clear steps.
             </h2>
             <p className="mt-4 max-w-xl text-base font-normal leading-7 text-neutral-600">
               No manual infrastructure configuration needed. Opsify smoothly automates the pipeline from commit to deployment.
@@ -376,11 +348,11 @@ export default async function Home() {
 
           <div className="mt-16 grid gap-6 md:grid-cols-3">
             {steps.map((step, index) => (
-              <Card key={step.number} className="group relative overflow-hidden border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md">
+              <Card key={step.number} className="group relative overflow-hidden border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:bg-[#58a4b0]/30 hover:shadow-md">
                 <CardContent className="p-8">
                   <div className="flex items-start justify-between">
-                    <span className="font-mono text-sm font-bold text-neutral-300">{step.number}</span>
-                    <div className="text-neutral-400 group-hover:text-neutral-900 transition-colors">
+                    <span className="font-mono text-sm font-bold text-black">{step.number}</span>
+                    <div className="text-black group-hover:text-neutral-900 transition-colors">
                       {index === 0 && <GitHubLogo />}
                       {index === 1 && <LayersIcon />}
                       {index === 2 && <RocketIcon />}
@@ -397,33 +369,27 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* =========================================================
-          FEATURES SECTION
-      ========================================================= */}
-      <section id="features" className="border-y border-neutral-200 bg-white px-6 py-28 md:py-36">
+      <section id="features" data-navbar-theme="teal" className="border-y border-neutral-200 bg-[#58a4b0] px-6 py-28 md:py-36">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
             <div className="max-w-2xl">
-              <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.2em] text-neutral-400">
-                Core Capabilities
-              </p>
               <h2 className="text-3xl font-extrabold tracking-tight text-neutral-900 md:text-5xl">
                 Advanced DevOps,<br />
-                <span className="text-neutral-400">without the configuration overhead.</span>
+                <span className="text-white">without the configuration overhead.</span>
               </h2>
             </div>
-            <p className="max-w-md text-base font-normal leading-7 text-neutral-600">
+            <p className="max-w-md text-base font-normal leading-7 text-white">
               Opsify handles standard maintenance automation while maintaining complete visibility and control over your configuration files.
             </p>
           </div>
 
           <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((feature, index) => (
-              <Card key={feature.title} className="group border-neutral-200 bg-[#fafafa]/50 shadow-none transition-all duration-300 hover:bg-white hover:shadow-sm">
+              <Card key={feature.title} className="group border-neutral-200 bg-[#fafafa]/50 shadow-none transition-all duration-300 hover:bg-[#cdedf6] hover:shadow-sm">
                 <CardContent className="p-8">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-neutral-400">{feature.number}</span>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-600 shadow-sm group-hover:text-neutral-900 group-hover:border-neutral-300 transition">
+                    <span className="font-mono text-sm font-bold text-black">{feature.number}</span>
+                    <div className="flex h-10 w-10 items-center justify-center text-neutral-600 group-hover:text-neutral-900 group-hover:border-neutral-300 transition">
                       {index === 0 && <SparkleIcon />}
                       {index === 1 && <ShieldIcon />}
                       {index === 2 && <RocketIcon />}
@@ -441,23 +407,14 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* =========================================================
-          FINAL CALL TO ACTION
-      ========================================================= */}
-      <section id="get-started" className="px-6 py-28 md:py-36 bg-[#fafafa]">
-        <Card className="relative mx-auto max-w-5xl overflow-hidden border-neutral-200 bg-neutral-900 text-white shadow-2xl">
-          
-          {/* Subtle Glow */}
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-[300px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.05] blur-3xl" />
+      <section id="get-started" data-navbar-theme="light" className="px-6 py-28 md:py-36 bg-[#cdedf6]">
+        <Card className="relative mx-auto max-w-5xl overflow-hidden border-neutral-200 bg-[#0d1821] text-white shadow-2xl">
 
           <CardContent className="relative px-6 py-20 text-center md:px-16 md:py-28">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-white text-neutral-900 shadow">
-              <ZapIcon />
-            </div>
 
             <h2 className="mx-auto mt-6 max-w-3xl text-3xl font-extrabold leading-[1.1] tracking-tight md:text-5xl">
               Stop configuring manual infrastructure.<br />
-              <span className="text-neutral-400">Start shipping production apps.</span>
+              <span className="text-white">Start shipping production apps.</span>
             </h2>
 
             <p className="mx-auto mt-6 max-w-lg text-sm font-normal leading-6 text-neutral-400 md:text-base">
@@ -467,36 +424,20 @@ export default async function Home() {
             <Button
               asChild
               size="lg"
-              className="mt-8 h-12 rounded-xl bg-white px-8 font-bold text-neutral-900 hover:bg-neutral-100 shadow transition-all"
+              className="mt-8 h-12 rounded-xl bg-white px-8 font-bold text-neutral-900 hover:bg-neutral-100 shadow transition-all cursor-pointer"
             >
-              <a href="#">
+              <Link href="/deploy">
+              <div className="flex items-center">
                 Get started with Opsify
                 <span className="ml-2"><ArrowRight /></span>
-              </a>
+              </div>
+              </Link>
             </Button>
           </CardContent>
         </Card>
       </section>
 
-      {/* =========================================================
-          FOOTER
-      ========================================================= */}
-      <footer className="border-t border-neutral-200 bg-white px-6">
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 py-8 text-sm sm:flex-row sm:items-center">
-          <div className="flex items-center gap-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-900 text-white">
-              <ZapIcon />
-            </div>
-            <div>
-              <p className="font-bold text-neutral-900">Opsify</p>
-              <p className="text-[11px] text-neutral-400">Deploy smarter. Ship faster.</p>
-            </div>
-          </div>
-          <div className="text-xs font-medium text-neutral-400">
-            © {new Date().getFullYear()} Opsify Inc. Built for professional developers.
-          </div>
-        </div>
-      </footer>
+      
     </main>
   );
 }
