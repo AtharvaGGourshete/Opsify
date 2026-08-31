@@ -1,63 +1,472 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: >
-  Opsify AWS bootstrap. Uses the existing GitHub Actions OIDC provider,
-  creates an IAM deployment role and callback mechanism used to
-  register the AWS connection with Opsify.
+  Opsify AWS bootstrap POC. Idempotently ensures the GitHub Actions OIDC
+  provider exists, creates a connection-specific deployment role and callback
+  Lambda, and registers the AWS connection with Opsify.
 
 Parameters:
 
+  ConnectionId:
+    Type: String
+    Description: Unique Opsify AWS connection ID.
+    AllowedPattern: "^[0-9a-fA-F-]{36}$"
+
   GitHubUserId:
     Type: String
-    Description: GitHub user ID associated with this Opsify AWS connection
-
-  OpsifyCallbackUrl:
-    Type: String
-    Description: Opsify API endpoint used to register the AWS connection
+    Description: GitHub user ID associated with this Opsify connection.
 
   GitHubOwner:
     Type: String
-    Description: GitHub organization or user name
-    Default: AtharvaGGourshete
-
-  GitHubOwnerId:
-    Type: String
-    Description: GitHub owner numeric ID
-    Default: "158183496"
+    Description: GitHub organization or user name.
 
   GitHubRepository:
     Type: String
-    Description: GitHub repository name
-    Default: Opsify
-
-  GitHubRepositoryId:
-    Type: String
-    Description: GitHub repository numeric ID
-    Default: "1331317336"
+    Description: GitHub repository name.
 
   GitHubBranch:
     Type: String
-    Description: GitHub branch allowed to deploy
+    Description: GitHub branch allowed to deploy.
     Default: main
+
+  OpsifyCallbackUrl:
+    Type: String
+    Description: Public Opsify callback endpoint.
 
 
 Resources:
 
   # ============================================================
-  # 1. Deployment IAM Role
+  # 1. Idempotent GitHub OIDC provider manager
+  # ============================================================
+
+  OIDCManagerRole:
+    Type: AWS::IAM::Role
+
+    Properties:
+
+      RoleName: !Sub "OpsifyOIDCManagerRole-${ConnectionId}"
+
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+
+        Statement:
+
+          - Effect: Allow
+
+            Principal:
+              Service: lambda.amazonaws.com
+
+            Action:
+              - sts:AssumeRole
+
+      Policies:
+
+        - PolicyName: OpsifyOIDCManagerPolicy
+
+          PolicyDocument:
+
+            Version: "2012-10-17"
+
+            Statement:
+
+              - Sid: OIDCManagement
+
+                Effect: Allow
+
+                Action:
+                  - iam:ListOpenIDConnectProviders
+                  - iam:GetOpenIDConnectProvider
+                  - iam:CreateOpenIDConnectProvider
+                  - iam:AddClientIDToOpenIDConnectProvider
+                  - iam:DeleteOpenIDConnectProvider
+
+                Resource: "*"
+
+
+              - Sid: LambdaLogging
+
+                Effect: Allow
+
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+
+                Resource: "*"
+
+
+  OIDCManagerFunction:
+    Type: AWS::Lambda::Function
+
+    Properties:
+
+      FunctionName: !Sub "OpsifyOIDCManager-${ConnectionId}"
+
+      Runtime: python3.12
+
+      Handler: index.handler
+
+      Role: !GetAtt OIDCManagerRole.Arn
+
+      Timeout: 30
+
+      Code:
+
+        ZipFile: |
+
+          import json
+          import urllib.request
+          import boto3
+
+
+          iam = boto3.client("iam")
+
+          OIDC_URL = "https://token.actions.githubusercontent.com"
+
+          OIDC_AUDIENCE = "sts.amazonaws.com"
+
+
+          def send_response(
+              event,
+              context,
+              status,
+              reason,
+              data=None,
+              physical_id=None
+          ):
+
+              body = {
+
+                  "Status": status,
+
+                  "Reason": reason,
+
+                  "PhysicalResourceId":
+                      physical_id or context.log_stream_name,
+
+                  "StackId": event["StackId"],
+
+                  "RequestId": event["RequestId"],
+
+                  "LogicalResourceId":
+                      event["LogicalResourceId"],
+
+                  "Data": data or {}
+
+              }
+
+
+              request = urllib.request.Request(
+
+                  event["ResponseURL"],
+
+                  data=json.dumps(body).encode("utf-8"),
+
+                  method="PUT"
+
+              )
+
+
+              request.add_header(
+                  "Content-Type",
+                  "application/json"
+              )
+
+
+              with urllib.request.urlopen(
+                  request,
+                  timeout=10
+              ) as response:
+
+                  print(
+                      "CloudFormation response:",
+                      response.status
+                  )
+
+
+          def find_provider():
+
+              response = iam.list_open_id_connect_providers()
+
+              suffix = (
+                  "oidc-provider/"
+                  "token.actions.githubusercontent.com"
+              )
+
+
+              for provider in response.get(
+                  "OpenIDConnectProviderList",
+                  []
+              ):
+
+                  arn = provider["Arn"]
+
+
+                  if arn.endswith(suffix):
+
+                      return arn
+
+
+              return None
+
+
+          def handler(event, context):
+
+              print(json.dumps(event))
+
+
+              try:
+
+                  request_type = event["RequestType"]
+
+
+                  # ------------------------------------------------
+                  # DELETE
+                  # ------------------------------------------------
+
+                  if request_type == "Delete":
+
+                      physical_id = event.get(
+                          "PhysicalResourceId",
+                          ""
+                      )
+
+
+                      if physical_id.startswith("created:"):
+
+                          arn = physical_id[
+                              len("created:"):
+                          ]
+
+
+                          iam.delete_open_id_connect_provider(
+
+                              OpenIDConnectProviderArn=arn
+
+                          )
+
+
+                      send_response(
+
+                          event,
+
+                          context,
+
+                          "SUCCESS",
+
+                          "OIDC provider cleanup complete",
+
+                          physical_id=(
+                              physical_id
+                              or context.log_stream_name
+                          )
+
+                      )
+
+
+                      return
+
+
+                  previous_id = event.get(
+                      "PhysicalResourceId",
+                      ""
+                  )
+
+
+                  previous_created = (
+                      previous_id.startswith("created:")
+                  )
+
+
+                  arn = find_provider()
+
+                  created = previous_created
+
+
+                  # ------------------------------------------------
+                  # CREATE IF MISSING
+                  # ------------------------------------------------
+
+                  if arn is None:
+
+                      try:
+
+                          response = (
+                              iam.create_open_id_connect_provider(
+
+                                  Url=OIDC_URL,
+
+                                  ClientIDList=[
+                                      OIDC_AUDIENCE
+                                  ]
+
+                              )
+                          )
+
+
+                          arn = (
+                              response[
+                                  "OpenIDConnectProviderArn"
+                              ]
+                          )
+
+
+                          created = True
+
+
+                      except (
+                          iam.exceptions
+                          .EntityAlreadyExistsException
+                      ):
+
+                          arn = find_provider()
+
+
+                  if arn is None:
+
+                      raise RuntimeError(
+
+                          "GitHub Actions OIDC provider "
+                          "could not be found or created"
+
+                      )
+
+
+                  # ------------------------------------------------
+                  # ENSURE STS AUDIENCE EXISTS
+                  # ------------------------------------------------
+
+                  details = (
+                      iam.get_open_id_connect_provider(
+
+                          OpenIDConnectProviderArn=arn
+
+                      )
+                  )
+
+
+                  if OIDC_AUDIENCE not in (
+                      details.get(
+                          "ClientIDList",
+                          []
+                      )
+                  ):
+
+                      (
+                          iam
+                          .add_client_id_to_open_id_connect_provider(
+
+                              OpenIDConnectProviderArn=arn,
+
+                              ClientID=OIDC_AUDIENCE
+
+                          )
+                      )
+
+
+                  # ------------------------------------------------
+                  # PRESERVE OWNERSHIP INFORMATION
+                  # ------------------------------------------------
+
+                  physical_id = (
+
+                      "created:"
+                      if created
+                      else
+                      "existing:"
+
+                  ) + arn
+
+
+                  send_response(
+
+                      event,
+
+                      context,
+
+                      "SUCCESS",
+
+                      "GitHub Actions OIDC provider is ready",
+
+                      data={
+                          "ProviderArn": arn
+                      },
+
+                      physical_id=physical_id
+
+                  )
+
+
+              except Exception as error:
+
+                  print(
+                      "OIDC manager failed:",
+                      str(error)
+                  )
+
+
+                  try:
+
+                      send_response(
+
+                          event,
+
+                          context,
+
+                          "FAILED",
+
+                          str(error)
+
+                      )
+
+                  except Exception as response_error:
+
+                      print(
+                          "Failed to send CloudFormation response:",
+                          str(response_error)
+                      )
+
+
+                  raise
+
+
+  EnsureGitHubOIDCProvider:
+    Type: Custom::EnsureGitHubOIDCProvider
+
+    DependsOn:
+      - OIDCManagerFunction
+
+    Properties:
+
+      ServiceToken:
+        !GetAtt OIDCManagerFunction.Arn
+
+      ConnectionId:
+        !Ref ConnectionId
+
+      ProviderUrl:
+        https://token.actions.githubusercontent.com
+
+
+  # ============================================================
+  # 2. Connection-specific GitHub Actions deployment role
   # ============================================================
 
   OpsifyDeploymentRole:
     Type: AWS::IAM::Role
 
+    DependsOn:
+      - EnsureGitHubOIDCProvider
+
     Properties:
 
-      # Unique role name for this repository
-      RoleName: !Sub "OpsifyDeploymentRole-${GitHubRepositoryId}"
+      RoleName:
+        !Sub "OpsifyDeploymentRole-${ConnectionId}"
 
       Description: >
         IAM role assumed by GitHub Actions through GitHub OIDC
-        for Opsify deployments.
+        for this Opsify deployment connection.
 
       AssumeRolePolicyDocument:
 
@@ -69,10 +478,10 @@ Resources:
 
             Principal:
 
-              Federated: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com"
+              Federated:
+                !GetAtt EnsureGitHubOIDCProvider.ProviderArn
 
             Action:
-
               - sts:AssumeRoleWithWebIdentity
 
             Condition:
@@ -80,15 +489,11 @@ Resources:
               StringEquals:
 
                 token.actions.githubusercontent.com:aud:
-                  - sts.amazonaws.com
+                  sts.amazonaws.com
 
                 token.actions.githubusercontent.com:sub:
-                  - !Sub "repo:${GitHubOwner}/${GitHubRepository}:ref:refs/heads/${GitHubBranch}"
+                  !Sub "repo:${GitHubOwner}/${GitHubRepository}:ref:refs/heads/${GitHubBranch}"
 
-
-      # ========================================================
-      # Deployment permissions
-      # ========================================================
 
       Policies:
 
@@ -109,7 +514,6 @@ Resources:
                 Effect: Allow
 
                 Action:
-
                   - cloudformation:*
 
                 Resource: "*"
@@ -119,12 +523,11 @@ Resources:
               # S3
               # ------------------------------------------------
 
-              - Sid: S3
+              - Sid: SAMDeploymentBucket
 
                 Effect: Allow
 
                 Action:
-
                   - s3:*
 
                 Resource: "*"
@@ -181,7 +584,7 @@ Resources:
 
 
               # ------------------------------------------------
-              # IAM roles created by SAM / CloudFormation
+              # IAM roles created by SAM
               # ------------------------------------------------
 
               - Sid: IAMForSAMGeneratedRoles
@@ -212,7 +615,6 @@ Resources:
                 Effect: Allow
 
                 Action:
-
                   - iam:PassRole
 
                 Resource: "*"
@@ -222,8 +624,7 @@ Resources:
                   StringEquals:
 
                     iam:PassedToService:
-
-                      - lambda.amazonaws.com
+                      lambda.amazonaws.com
 
 
               # ------------------------------------------------
@@ -239,14 +640,13 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:DeleteLogGroup
                   - logs:PutRetentionPolicy
-                  - logs:DeleteRetentionPolicy
                   - logs:TagResource
 
                 Resource: "*"
 
 
   # ============================================================
-  # 2. Lambda Execution Role
+  # 3. Callback Lambda role
   # ============================================================
 
   AWSDetailsCallbackRole:
@@ -254,7 +654,8 @@ Resources:
 
     Properties:
 
-      RoleName: !Sub "OpsifyAWSCallbackRole-${GitHubUserId}"
+      RoleName:
+        !Sub "OpsifyCallbackRole-${ConnectionId}"
 
       AssumeRolePolicyDocument:
 
@@ -267,11 +668,9 @@ Resources:
             Principal:
 
               Service:
-
-                - lambda.amazonaws.com
+                lambda.amazonaws.com
 
             Action:
-
               - sts:AssumeRole
 
 
@@ -285,41 +684,26 @@ Resources:
 
             Statement:
 
-              # ------------------------------------------------
-              # Get AWS account ID
-              # ------------------------------------------------
-
-              - Sid: GetAWSAccountIdentity
+              - Sid: GetCallerIdentity
 
                 Effect: Allow
 
                 Action:
-
                   - sts:GetCallerIdentity
 
                 Resource: "*"
 
-
-              # ------------------------------------------------
-              # Get deployment role
-              # ------------------------------------------------
 
               - Sid: GetDeploymentRole
 
                 Effect: Allow
 
                 Action:
-
                   - iam:GetRole
 
                 Resource:
+                  !GetAtt OpsifyDeploymentRole.Arn
 
-                  - !GetAtt OpsifyDeploymentRole.Arn
-
-
-              # ------------------------------------------------
-              # Lambda logging
-              # ------------------------------------------------
 
               - Sid: LambdaLogging
 
@@ -335,26 +719,27 @@ Resources:
 
 
   # ============================================================
-  # 3. Callback Lambda
+  # 4. Callback Lambda
   # ============================================================
 
   AWSDetailsCallbackFunction:
     Type: AWS::Lambda::Function
 
     DependsOn:
-
       - AWSDetailsCallbackRole
       - OpsifyDeploymentRole
 
     Properties:
 
-      FunctionName: !Sub "OpsifyAWSDetailsCallback-${GitHubUserId}"
+      FunctionName:
+        !Sub "OpsifyCallback-${ConnectionId}"
 
       Runtime: python3.12
 
       Handler: index.handler
 
-      Role: !GetAtt AWSDetailsCallbackRole.Arn
+      Role:
+        !GetAtt AWSDetailsCallbackRole.Arn
 
       Timeout: 30
 
@@ -369,45 +754,165 @@ Resources:
 
 
           sts = boto3.client("sts")
+
           iam = boto3.client("iam")
 
 
-          def send_cfn_response(event, context, status, reason="", data=None):
+          def send_cfn_response(
+              event,
+              context,
+              status,
+              reason="",
+              data=None,
+              physical_id=None
+          ):
 
-              response_url = event["ResponseURL"]
+              body = {
 
-              response_body = {
                   "Status": status,
-                  "Reason": reason or "See CloudWatch Logs",
-                  "PhysicalResourceId": context.log_stream_name,
-                  "StackId": event["StackId"],
-                  "RequestId": event["RequestId"],
-                  "LogicalResourceId": event["LogicalResourceId"],
-                  "Data": data or {}
+
+                  "Reason":
+                      reason or
+                      "See CloudWatch Logs",
+
+                  "PhysicalResourceId":
+                      physical_id or
+                      context.log_stream_name,
+
+                  "StackId":
+                      event["StackId"],
+
+                  "RequestId":
+                      event["RequestId"],
+
+                  "LogicalResourceId":
+                      event["LogicalResourceId"],
+
+                  "Data":
+                      data or {}
+
               }
 
-              response_data = json.dumps(response_body).encode("utf-8")
 
               request = urllib.request.Request(
-                  response_url,
-                  data=response_data,
+
+                  event["ResponseURL"],
+
+                  data=json.dumps(
+                      body
+                  ).encode("utf-8"),
+
                   method="PUT"
+
               )
+
 
               request.add_header(
+
                   "Content-Type",
-                  ""
+
+                  "application/json"
+
               )
 
-              with urllib.request.urlopen(request) as response:
+
+              with urllib.request.urlopen(
+
+                  request,
+
+                  timeout=10
+
+              ) as response:
 
                   print(
+
                       "CloudFormation response:",
+
                       response.status
+
                   )
 
 
-          def handler(event, context):
+          def post_callback(
+              callback_url,
+              payload
+          ):
+
+              request = urllib.request.Request(
+
+                  callback_url,
+
+                  data=json.dumps(
+                      payload
+                  ).encode("utf-8"),
+
+                  method="POST"
+
+              )
+
+
+              request.add_header(
+
+                  "Content-Type",
+
+                  "application/json"
+
+              )
+
+
+              request.add_header(
+
+                  "X-Opsify-Connection-Id",
+
+                  payload["connection_id"]
+
+              )
+
+
+              with urllib.request.urlopen(
+
+                  request,
+
+                  timeout=15
+
+              ) as response:
+
+                  response_body = (
+                      response
+                      .read()
+                      .decode("utf-8")
+                  )
+
+
+                  print(
+
+                      "Opsify response:",
+
+                      response.status,
+
+                      response_body
+
+                  )
+
+
+                  if (
+                      response.status < 200
+                      or response.status >= 300
+                  ):
+
+                      raise RuntimeError(
+
+                          f"Opsify returned HTTP "
+                          f"{response.status}: "
+                          f"{response_body}"
+
+                      )
+
+
+          def handler(
+              event,
+              context
+          ):
 
               print(
                   "Received CloudFormation event:"
@@ -417,101 +922,166 @@ Resources:
                   json.dumps(event)
               )
 
+
+              physical_id = (
+
+                  event.get(
+                      "PhysicalResourceId"
+                  )
+
+                  or
+
+                  event[
+                      "ResourceProperties"
+                  ].get(
+                      "ConnectionId"
+                  )
+
+                  or
+
+                  context.log_stream_name
+
+              )
+
+
               try:
 
-                  request_type = event["RequestType"]
+                  request_type = (
+                      event["RequestType"]
+                  )
 
 
-                  # ------------------------------------------------
-                  # Delete
-                  # ------------------------------------------------
+                  # --------------------------------------------
+                  # DELETE
+                  # --------------------------------------------
 
                   if request_type == "Delete":
 
                       send_cfn_response(
+
                           event,
+
                           context,
+
                           "SUCCESS",
-                          "Delete request handled"
+
+                          "Delete request handled",
+
+                          physical_id=physical_id
+
                       )
 
                       return
 
 
-                  # ------------------------------------------------
-                  # AWS account information
-                  # ------------------------------------------------
-
-                  identity = sts.get_caller_identity()
-
-                  aws_account_id = identity["Account"]
-
-                  aws_region = os.environ["AWS_REGION"]
+                  properties = (
+                      event[
+                          "ResourceProperties"
+                      ]
+                  )
 
 
-                  # ------------------------------------------------
-                  # CloudFormation parameters
-                  # ------------------------------------------------
+                  connection_id = (
+                      properties[
+                          "ConnectionId"
+                      ]
+                  )
+
 
                   github_user_id = (
-                      event["ResourceProperties"]
-                      ["GitHubUserId"]
+                      properties[
+                          "GitHubUserId"
+                      ]
                   )
+
 
                   callback_url = (
-                      event["ResourceProperties"]
-                      ["OpsifyCallbackUrl"]
+                      properties[
+                          "OpsifyCallbackUrl"
+                      ]
                   )
+
 
                   role_name = (
-                      event["ResourceProperties"]
-                      ["RoleName"]
+                      properties[
+                          "RoleName"
+                      ]
                   )
 
 
-                  # ------------------------------------------------
-                  # Get IAM role
-                  # ------------------------------------------------
+                  # --------------------------------------------
+                  # AWS identity
+                  # --------------------------------------------
 
-                  role_response = iam.get_role(
-                      RoleName=role_name
+                  aws_account_id = (
+                      sts
+                      .get_caller_identity()
+                      ["Account"]
                   )
 
-                  role_arn = (
-                      role_response
+
+                  aws_region = (
+                      os.environ[
+                          "AWS_REGION"
+                      ]
+                  )
+
+
+                  # --------------------------------------------
+                  # Deployment role
+                  # --------------------------------------------
+
+                  role = (
+                      iam
+                      .get_role(
+                          RoleName=role_name
+                      )
                       ["Role"]
-                      ["Arn"]
                   )
 
 
-                  # ------------------------------------------------
-                  # Stack information
-                  # ------------------------------------------------
+                  # --------------------------------------------
+                  # Stack
+                  # --------------------------------------------
 
-                  stack_id = event["StackId"]
+                  stack_name = (
+                      event[
+                          "StackId"
+                      ]
+                      .split("/")[1]
+                  )
 
-                  stack_name = stack_id.split("/")[1]
 
-
-                  # ------------------------------------------------
-                  # Payload for Opsify
-                  # ------------------------------------------------
+                  # --------------------------------------------
+                  # Callback payload
+                  # --------------------------------------------
 
                   payload = {
 
-                      "github_user_id": github_user_id,
+                      "connection_id":
+                          connection_id,
 
-                      "aws_account_id": aws_account_id,
+                      "github_user_id":
+                          github_user_id,
 
-                      "aws_region": aws_region,
+                      "aws_account_id":
+                          aws_account_id,
 
-                      "role_name": role_name,
+                      "aws_region":
+                          aws_region,
 
-                      "role_arn": role_arn,
+                      "role_name":
+                          role_name,
 
-                      "status": "connected",
+                      "role_arn":
+                          role["Arn"],
 
-                      "bootstrap_stack_name": stack_name
+                      "status":
+                          "connected",
+
+                      "bootstrap_stack_name":
+                          stack_name
+
                   }
 
 
@@ -524,54 +1094,22 @@ Resources:
                   )
 
 
-                  # ------------------------------------------------
-                  # POST to Opsify backend
-                  # ------------------------------------------------
+                  # --------------------------------------------
+                  # Notify Opsify
+                  # --------------------------------------------
 
-                  request_data = (
-                      json.dumps(payload)
-                      .encode("utf-8")
-                  )
+                  post_callback(
 
-                  request = urllib.request.Request(
                       callback_url,
-                      data=request_data,
-                      method="POST"
-                  )
 
-                  request.add_header(
-                      "Content-Type",
-                      "application/json"
+                      payload
+
                   )
 
 
-                  with urllib.request.urlopen(
-                      request,
-                      timeout=15
-                  ) as response:
-
-                      response_body = (
-                          response
-                          .read()
-                          .decode("utf-8")
-                      )
-
-                      print(
-                          "Opsify response:",
-                          response.status,
-                          response_body
-                      )
-
-                      if response.status < 200 or response.status >= 300:
-
-                          raise Exception(
-                              f"Opsify returned HTTP {response.status}"
-                          )
-
-
-                  # ------------------------------------------------
-                  # Tell CloudFormation the custom resource succeeded
-                  # ------------------------------------------------
+                  # --------------------------------------------
+                  # CloudFormation SUCCESS
+                  # --------------------------------------------
 
                   send_cfn_response(
 
@@ -583,43 +1121,73 @@ Resources:
 
                       "AWS details registered successfully",
 
-                      {
-                          "AWSAccountId": aws_account_id,
+                      data={
 
-                          "RoleName": role_name,
+                          "ConnectionId":
+                              connection_id,
 
-                          "RoleArn": role_arn
-                      }
+                          "AWSAccountId":
+                              aws_account_id,
+
+                          "RoleName":
+                              role_name,
+
+                          "RoleArn":
+                              role["Arn"]
+
+                      },
+
+                      physical_id=
+                          connection_id
+
                   )
 
 
               except Exception as error:
 
                   print(
-                      "Callback failed:"
-                  )
 
-                  print(
-                      str(error)
-                  )
-
-
-                  send_cfn_response(
-
-                      event,
-
-                      context,
-
-                      "FAILED",
+                      "Callback failed:",
 
                       str(error)
+
                   )
+
+
+                  try:
+
+                      send_cfn_response(
+
+                          event,
+
+                          context,
+
+                          "FAILED",
+
+                          str(error),
+
+                          physical_id=
+                              physical_id
+
+                      )
+
+                  except Exception as response_error:
+
+                      print(
+
+                          "Failed to send "
+                          "CloudFormation failure response:",
+
+                          str(response_error)
+
+                      )
+
 
                   raise
 
 
   # ============================================================
-  # 4. CloudFormation Custom Resource
+  # 5. CloudFormation custom resource
   # ============================================================
 
   AWSDetailsCallback:
@@ -634,6 +1202,9 @@ Resources:
 
       ServiceToken:
         !GetAtt AWSDetailsCallbackFunction.Arn
+
+      ConnectionId:
+        !Ref ConnectionId
 
       GitHubUserId:
         !Ref GitHubUserId
@@ -651,12 +1222,7 @@ Resources:
 
 Outputs:
 
-  # ------------------------------------------------------------
-  # AWS Account ID
-  # ------------------------------------------------------------
-
   AWSAccountId:
-
     Description:
       AWS account ID where the bootstrap stack is deployed.
 
@@ -664,51 +1230,31 @@ Outputs:
       !Ref AWS::AccountId
 
 
-  # ------------------------------------------------------------
-  # Deployment Role ARN
-  # ------------------------------------------------------------
-
   DeploymentRoleArn:
-
     Description:
-      IAM role ARN to use for Opsify deployments.
+      Connection-specific IAM role ARN for GitHub Actions.
 
     Value:
       !GetAtt OpsifyDeploymentRole.Arn
 
 
-  # ------------------------------------------------------------
-  # Deployment Role Name
-  # ------------------------------------------------------------
-
   DeploymentRoleName:
-
     Description:
-      IAM deployment role name.
+      Connection-specific IAM deployment role name.
 
     Value:
       !Ref OpsifyDeploymentRole
 
 
-  # ------------------------------------------------------------
-  # Existing GitHub OIDC Provider ARN
-  # ------------------------------------------------------------
-
   GitHubOIDCProviderArn:
-
     Description:
-      Existing GitHub Actions OIDC provider used by the deployment role.
+      GitHub Actions OIDC provider used by the deployment role.
 
     Value:
-      !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com"
+      !GetAtt EnsureGitHubOIDCProvider.ProviderArn
 
-
-  # ------------------------------------------------------------
-  # GitHub OIDC Subject
-  # ------------------------------------------------------------
 
   GitHubSubject:
-
     Description:
       GitHub OIDC subject trusted by the deployment role.
 
