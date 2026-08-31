@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: >
-  Opsify AWS bootstrap. Creates the GitHub Actions OIDC provider,
-  IAM deployment role, and callback mechanism used to register
-  the AWS connection with Opsify.
+  Opsify AWS bootstrap. Uses the GitHub Actions OIDC provider,
+  creates an IAM deployment role and callback mechanism used to
+  register the AWS connection with Opsify.
 
 Parameters:
 
@@ -44,213 +44,195 @@ Parameters:
 Resources:
 
   # ============================================================
-  # 1. GitHub Actions OIDC Provider
-  # ============================================================
-
-  GitHubOIDCProvider:
-    Type: AWS::IAM::OIDCProvider
-
-    Properties:
-      Url: https://token.actions.githubusercontent.com
-
-      ClientIdList:
-        - sts.amazonaws.com
-
-
-  # ============================================================
-  # 2. Deployment IAM Role
+  # 1. Deployment IAM Role
   # ============================================================
 
   OpsifyDeploymentRole:
     Type: AWS::IAM::Role
 
-    DependsOn:
-      - GitHubOIDCProvider
-
     Properties:
-      RoleName: !Sub "OpsifyDeploymentRole-${GitHubRepositoryId}"
 
       Description: >
         IAM role assumed by GitHub Actions through GitHub OIDC
         for Opsify deployments.
 
       AssumeRolePolicyDocument:
+
         Version: "2012-10-17"
 
         Statement:
+
           - Effect: Allow
 
             Principal:
-              Federated: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com"
+              Federated: !Sub >
+                arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
 
             Action:
               - sts:AssumeRoleWithWebIdentity
 
             Condition:
+
               StringEquals:
 
                 token.actions.githubusercontent.com:aud:
                   - sts.amazonaws.com
 
                 token.actions.githubusercontent.com:sub:
-                  - !Sub "repo:${GitHubOwner}@${GitHubOwnerId}/${GitHubRepository}@${GitHubRepositoryId}:ref:refs/heads/${GitHubBranch}"
+                  - !Sub >
+                    repo:${GitHubOwner}/${GitHubRepository}:ref:refs/heads/${GitHubBranch}
 
 
       Policies:
 
-        - PolicyName: OpsifyDeploymentPolicy
+        # --------------------------------------------------------
+        # CloudFormation
+        # --------------------------------------------------------
 
-          PolicyDocument:
+        - Sid: CloudFormation
 
-            Version: "2012-10-17"
+          Effect: Allow
 
-            Statement:
+          Action:
+            - cloudformation:*
 
-              # ------------------------------------------------
-              # CloudFormation
-              # ------------------------------------------------
-
-              - Sid: CloudFormation
-
-                Effect: Allow
-
-                Action:
-                  - cloudformation:*
-
-                Resource: "*"
+          Resource: "*"
 
 
-              # ------------------------------------------------
-              # S3
-              # ------------------------------------------------
+        # --------------------------------------------------------
+        # S3
+        # --------------------------------------------------------
 
-              - Sid: SAMDeploymentBucket
+        - Sid: SAMDeploymentBucket
 
-                Effect: Allow
+          Effect: Allow
 
-                Action:
-                  - s3:*
+          Action:
+            - s3:*
 
-                Resource: "*"
-
-
-              # ------------------------------------------------
-              # Lambda
-              # ------------------------------------------------
-
-              - Sid: Lambda
-
-                Effect: Allow
-
-                Action:
-                  - lambda:CreateFunction
-                  - lambda:UpdateFunctionCode
-                  - lambda:UpdateFunctionConfiguration
-                  - lambda:DeleteFunction
-                  - lambda:GetFunction
-                  - lambda:GetFunctionConfiguration
-                  - lambda:ListVersionsByFunction
-                  - lambda:PublishVersion
-                  - lambda:CreateAlias
-                  - lambda:UpdateAlias
-                  - lambda:DeleteAlias
-                  - lambda:GetAlias
-                  - lambda:AddPermission
-                  - lambda:RemovePermission
-                  - lambda:TagResource
-                  - lambda:UntagResource
-
-                Resource: "*"
+          Resource: "*"
 
 
-              # ------------------------------------------------
-              # API Gateway
-              # ------------------------------------------------
+        # --------------------------------------------------------
+        # Lambda
+        # --------------------------------------------------------
 
-              - Sid: APIGateway
+        - Sid: Lambda
 
-                Effect: Allow
+          Effect: Allow
 
-                Action:
-                  - apigateway:GET
-                  - apigateway:POST
-                  - apigateway:PUT
-                  - apigateway:PATCH
-                  - apigateway:DELETE
-                  - apigateway:TagResource
+          Action:
 
-                Resource: "*"
+            - lambda:CreateFunction
+            - lambda:UpdateFunctionCode
+            - lambda:UpdateFunctionConfiguration
+            - lambda:DeleteFunction
+            - lambda:GetFunction
+            - lambda:GetFunctionConfiguration
+            - lambda:ListVersionsByFunction
+            - lambda:PublishVersion
+            - lambda:CreateAlias
+            - lambda:UpdateAlias
+            - lambda:DeleteAlias
+            - lambda:GetAlias
+            - lambda:AddPermission
+            - lambda:RemovePermission
+            - lambda:TagResource
+            - lambda:UntagResource
 
-
-              # ------------------------------------------------
-              # IAM roles created by SAM / CloudFormation
-              # ------------------------------------------------
-
-              - Sid: IAMForSAMGeneratedRoles
-
-                Effect: Allow
-
-                Action:
-                  - iam:CreateRole
-                  - iam:DeleteRole
-                  - iam:GetRole
-                  - iam:PutRolePolicy
-                  - iam:DeleteRolePolicy
-                  - iam:AttachRolePolicy
-                  - iam:DetachRolePolicy
-                  - iam:TagRole
-                  - iam:UntagRole
-
-                Resource: "*"
+          Resource: "*"
 
 
-              # ------------------------------------------------
-              # PassRole
-              # ------------------------------------------------
+        # --------------------------------------------------------
+        # API Gateway
+        # --------------------------------------------------------
 
-              - Sid: PassRoleToLambda
+        - Sid: APIGateway
 
-                Effect: Allow
+          Effect: Allow
 
-                Action:
-                  - iam:PassRole
+          Action:
 
-                Resource: "*"
+            - apigateway:GET
+            - apigateway:POST
+            - apigateway:PUT
+            - apigateway:PATCH
+            - apigateway:DELETE
+            - apigateway:TagResource
 
-                Condition:
-                  StringEquals:
-                    iam:PassedToService:
-                      - lambda.amazonaws.com
+          Resource: "*"
 
 
-              # ------------------------------------------------
-              # CloudWatch Logs
-              # ------------------------------------------------
+        # --------------------------------------------------------
+        # IAM roles created by SAM / CloudFormation
+        # --------------------------------------------------------
 
-              - Sid: CloudWatchLogs
+        - Sid: IAMForSAMGeneratedRoles
 
-                Effect: Allow
+          Effect: Allow
 
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:DeleteLogGroup
-                  - logs:PutRetentionPolicy
-                  - logs:DeleteRetentionPolicy
-                  - logs:TagResource
+          Action:
 
-                Resource: "*"
+            - iam:CreateRole
+            - iam:DeleteRole
+            - iam:GetRole
+            - iam:PutRolePolicy
+            - iam:DeleteRolePolicy
+            - iam:AttachRolePolicy
+            - iam:DetachRolePolicy
+            - iam:TagRole
+            - iam:UntagRole
+
+          Resource: "*"
+
+
+        # --------------------------------------------------------
+        # PassRole
+        # --------------------------------------------------------
+
+        - Sid: PassRoleToLambda
+
+          Effect: Allow
+
+          Action:
+            - iam:PassRole
+
+          Resource: "*"
+
+          Condition:
+
+            StringEquals:
+              iam:PassedToService:
+                - lambda.amazonaws.com
+
+
+        # --------------------------------------------------------
+        # CloudWatch Logs
+        # --------------------------------------------------------
+
+        - Sid: CloudWatchLogs
+
+          Effect: Allow
+
+          Action:
+
+            - logs:CreateLogGroup
+            - logs:DeleteLogGroup
+            - logs:PutRetentionPolicy
+            - logs:DeleteRetentionPolicy
+            - logs:TagResource
+
+          Resource: "*"
 
 
   # ============================================================
-  # 3. Lambda Execution Role
+  # 2. Lambda Execution Role
   # ============================================================
 
   AWSDetailsCallbackRole:
     Type: AWS::IAM::Role
 
     Properties:
-
-      RoleName: !Sub "OpsifyAWSCallbackRole-${GitHubUserId}"
 
       AssumeRolePolicyDocument:
 
@@ -278,7 +260,10 @@ Resources:
 
             Statement:
 
+              # --------------------------------------------------
               # Get AWS account ID
+              # --------------------------------------------------
+
               - Effect: Allow
 
                 Action:
@@ -287,7 +272,10 @@ Resources:
                 Resource: "*"
 
 
+              # --------------------------------------------------
               # Get deployment role
+              # --------------------------------------------------
+
               - Effect: Allow
 
                 Action:
@@ -297,10 +285,14 @@ Resources:
                   - !GetAtt OpsifyDeploymentRole.Arn
 
 
+              # --------------------------------------------------
               # Lambda logging
+              # --------------------------------------------------
+
               - Effect: Allow
 
                 Action:
+
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
@@ -309,7 +301,7 @@ Resources:
 
 
   # ============================================================
-  # 4. Callback Lambda
+  # 3. Callback Lambda
   # ============================================================
 
   AWSDetailsCallbackFunction:
@@ -320,8 +312,6 @@ Resources:
       - OpsifyDeploymentRole
 
     Properties:
-
-      FunctionName: !Sub "OpsifyAWSDetailsCallback-${GitHubUserId}"
 
       Runtime: python3.12
 
@@ -592,7 +582,7 @@ Resources:
 
 
   # ============================================================
-  # 5. CloudFormation Custom Resource
+  # 4. CloudFormation Custom Resource
   # ============================================================
 
   AWSDetailsCallback:
@@ -601,7 +591,6 @@ Resources:
     DependsOn:
 
       - OpsifyDeploymentRole
-
       - AWSDetailsCallbackFunction
 
     Properties:
@@ -626,26 +615,47 @@ Resources:
 Outputs:
 
   AWSAccountId:
-    Description: AWS account ID where the bootstrap stack is deployed.
-    Value: !Ref AWS::AccountId
+
+    Description:
+      AWS account ID where the bootstrap stack is deployed.
+
+    Value:
+      !Ref AWS::AccountId
 
 
   DeploymentRoleArn:
-    Description: IAM role ARN to use in GitHub Actions.
-    Value: !GetAtt OpsifyDeploymentRole.Arn
+
+    Description:
+      IAM role ARN to use for Opsify deployments.
+
+    Value:
+      !GetAtt OpsifyDeploymentRole.Arn
 
 
   DeploymentRoleName:
-    Description: IAM deployment role name.
-    Value: !Ref OpsifyDeploymentRole
+
+    Description:
+      IAM deployment role name.
+
+    Value:
+      !Ref OpsifyDeploymentRole
 
 
   GitHubOIDCProviderArn:
-    Description: GitHub Actions OIDC provider created by this stack.
-    Value: !Ref GitHubOIDCProvider
+
+    Description:
+      Existing GitHub Actions OIDC provider used by the deployment role.
+
+    Value:
+      !Sub >
+        arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
 
 
   GitHubSubject:
-    Description: GitHub OIDC subject trusted by the deployment role.
-    Value: !Sub >
-      repo:${GitHubOwner}@${GitHubOwnerId}/${GitHubRepository}@${GitHubRepositoryId}:ref:refs/heads/${GitHubBranch}
+
+    Description:
+      GitHub OIDC subject trusted by the deployment role.
+
+    Value:
+      !Sub >
+        repo:${GitHubOwner}/${GitHubRepository}:ref:refs/heads/${GitHubBranch}
