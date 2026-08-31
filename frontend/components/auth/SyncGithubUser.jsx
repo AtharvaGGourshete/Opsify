@@ -1,44 +1,109 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useSession } from "next-auth/react";
-import { saveGithubUser } from "@/services/authService";
+import {
+  useEffect,
+  useRef,
+} from "react";
+
+import {
+  useSession,
+} from "next-auth/react";
+
+import {
+  saveGithubUser,
+} from "@/services/authService";
 
 export default function SyncGithubUser() {
-  const { data: session, status } = useSession();
+  const {
+    data: session,
+    status,
+  } = useSession();
 
-  const synced = useRef(false);
+  const syncedGithubId =
+    useRef(null);
 
   useEffect(() => {
     if (
       status !== "authenticated" ||
-      !session?.user ||
-      synced.current
+      !session?.user
+    ) {
+      return;
+    }
+
+    const github_user_id =
+      session.user.githubId;
+
+    if (!github_user_id) {
+      console.error(
+        "GitHub sync failed: githubId is missing from session"
+      );
+
+      return;
+    }
+
+    /*
+     * Prevent duplicate synchronization.
+     */
+    if (
+      syncedGithubId.current ===
+      String(github_user_id)
     ) {
       return;
     }
 
     const syncUser = async () => {
       try {
-        synced.current = true;
-
         const githubData = {
-          github_user_id: session.user.githubId,
-          github_username: session.user.name,
-          github_email: session.user.email,
+          github_user_id:
+            String(github_user_id),
+
+          github_username:
+            session.user.githubUsername ||
+            session.user.name ||
+            null,
+
+          github_email:
+            session.user.email ||
+            null,
         };
 
-        const result = await saveGithubUser(githubData);
+        console.log(
+          "Synchronizing GitHub user:",
+          githubData
+        );
 
-        console.log("GitHub user synced:", result);
+        /*
+         * Mark as synced only after
+         * successful API response.
+         */
+        const result =
+          await saveGithubUser(
+            githubData
+          );
+
+        syncedGithubId.current =
+          String(github_user_id);
+
+        console.log(
+          "GitHub user synced successfully:",
+          result
+        );
+
       } catch (error) {
-        console.error("GitHub sync failed:", error);
+        console.error(
+          "GitHub sync failed:",
+          error
+        );
 
-        synced.current = false;
+        /*
+         * Leave syncedGithubId unchanged
+         * so another attempt is possible.
+         */
       }
     };
 
     syncUser();
+
   }, [session, status]);
 
   return null;

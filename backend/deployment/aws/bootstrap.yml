@@ -12,19 +12,19 @@ Parameters:
     Description: Unique Opsify AWS connection ID.
     AllowedPattern: "^[0-9a-fA-F-]{36}$"
 
-  GitHubUserId:
+  github_user_id:
     Type: String
     Description: GitHub user ID associated with this Opsify connection.
 
-  GitHubOwner:
+  github_owner:
     Type: String
     Description: GitHub organization or user name.
 
-  GitHubRepository:
+  github_repository:
     Type: String
     Description: GitHub repository name.
 
-  GitHubBranch:
+  github_branch:
     Type: String
     Description: GitHub branch allowed to deploy.
     Default: main
@@ -492,7 +492,7 @@ Resources:
                   sts.amazonaws.com
 
                 token.actions.githubusercontent.com:sub:
-                  !Sub "repo:${GitHubOwner}/${GitHubRepository}:ref:refs/heads/${GitHubBranch}"
+                  !Sub "repo:${github_owner}/${github_repository}:ref:refs/heads/${github_branch}"
 
 
       Policies:
@@ -990,7 +990,7 @@ Resources:
 
                   github_user_id = (
                       properties[
-                          "GitHubUserId"
+                          "github_user_id"
                       ]
                   )
 
@@ -1206,8 +1206,8 @@ Resources:
       ConnectionId:
         !Ref ConnectionId
 
-      GitHubUserId:
-        !Ref GitHubUserId
+      github_user_id:
+        !Ref github_user_id
 
       OpsifyCallbackUrl:
         !Ref OpsifyCallbackUrl
@@ -1259,4 +1259,4 @@ Outputs:
       GitHub OIDC subject trusted by the deployment role.
 
     Value:
-      !Sub "repo:${GitHubOwner}/${GitHubRepository}:ref:refs/heads/${GitHubBranch}"
+      !Sub "repo:${github_owner}/${github_repository}:ref:refs/heads/${github_branch}"

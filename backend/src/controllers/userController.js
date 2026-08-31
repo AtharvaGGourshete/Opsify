@@ -1,56 +1,165 @@
 import sql from "../config/database.js";
 
+/*
+ * =========================================================
+ * GitHub Login / User Synchronization
+ * =========================================================
+ *
+ * Flow:
+ *
+ * GitHub Login
+ *      ↓
+ * POST /api/github
+ *      ↓
+ * Create/update aws_connections row
+ *      ↓
+ * AWS fields remain untouched if already connected
+ *
+ * =========================================================
+ */
+
 export const loginViaGithub = async (req, res) => {
   try {
-    const { github_user_id, github_username, github_email } = req.body;
+    const {
+      github_user_id,
+      github_username,
+      github_email,
+    } = req.body;
 
-    // Validate required fields
-    if (!github_user_id || !github_username || !github_email) {
+    console.log("GitHub user sync received:", {
+      github_user_id,
+      github_username,
+      github_email,
+    });
+
+    // -----------------------------------------------------
+    // Validate GitHub information
+    // -----------------------------------------------------
+
+    if (!github_user_id) {
       return res.status(400).json({
         success: false,
-        message: "GitHub user ID, username and email are required",
+        message: "GitHub user ID is required",
       });
     }
+
+    if (!github_username) {
+      return res.status(400).json({
+        success: false,
+        message: "GitHub username is required",
+      });
+    }
+
+    // GitHub email can be null/private.
+    // Therefore it is intentionally not required.
+
+    // -----------------------------------------------------
+    // Create or update GitHub connection record
+    // -----------------------------------------------------
+    //
+    // IMPORTANT:
+    //
+    // On a new GitHub login:
+    //   GitHub fields are populated.
+    //   AWS fields remain NULL.
+    //   status = pending.
+    //
+    // On an existing user:
+    //   GitHub information is refreshed.
+    //   Existing AWS information is PRESERVED.
+    //
+    // This is important because logging in again should
+    // NOT erase an already-connected AWS account.
+    //
+    // -----------------------------------------------------
 
     const result = await sql`
       INSERT INTO public.aws_connections (
         github_user_id,
         github_username,
-        github_email
+        github_email,
+        aws_account_id,
+        aws_region,
+        role_name,
+        role_arn,
+        status,
+        bootstrap_stack_name,
+        created_at,
+        updated_at
       )
       VALUES (
-        ${github_user_id},
+        ${String(github_user_id)},
         ${github_username},
-        ${github_email}
+        ${github_email || null},
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        'pending',
+        NULL,
+        now(),
+        now()
       )
+
       ON CONFLICT (github_user_id)
+
       DO UPDATE SET
         github_username = EXCLUDED.github_username,
         github_email = EXCLUDED.github_email,
         updated_at = now()
+
       RETURNING *;
     `;
+
+    if (result.length === 0) {
+      throw new Error(
+        "GitHub user could not be registered"
+      );
+    }
+
+    console.log(
+      "GitHub user synchronized successfully:",
+      result[0]
+    );
 
     return res.status(200).json({
       success: true,
       message: "GitHub user connected successfully",
       connection: result[0],
     });
+
   } catch (error) {
-    console.error("GitHub login error:", error);
+    console.error(
+      "GitHub login error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
       message: "Failed to save GitHub user",
+      error: error.message || "Internal server error",
     });
   }
 };
 
+
+/*
+ * =========================================================
+ * Get User Profile
+ * =========================================================
+ *
+ * GET /api/users/:github_user_id
+ *
+ * Returns the complete aws_connections record.
+ *
+ * =========================================================
+ */
+
 export const getUserProfile = async (req, res) => {
   try {
-    const { githubUserId } = req.params;
+    const { github_user_id } = req.params;
 
-    if (!githubUserId) {
+    if (!github_user_id) {
       return res.status(400).json({
         success: false,
         message: "GitHub user ID is required",
@@ -58,9 +167,22 @@ export const getUserProfile = async (req, res) => {
     }
 
     const result = await sql`
-      SELECT *
+      SELECT
+        id,
+        github_user_id,
+        github_username,
+        github_email,
+        aws_account_id,
+        aws_region,
+        role_name,
+        role_arn,
+        status,
+        bootstrap_stack_name,
+        created_at,
+        updated_at,
+        connection_id
       FROM public.aws_connections
-      WHERE github_user_id = ${githubUserId}
+      WHERE github_user_id = ${String(github_user_id)}
       LIMIT 1;
     `;
 
@@ -85,6 +207,20 @@ export const getUserProfile = async (req, res) => {
   }
 };
 
+
+/*
+ * =========================================================
+ * Save / Update AWS Details
+ * =========================================================
+ *
+ * POST /api/aws-details
+ *
+ * This endpoint is kept for compatibility with the
+ * existing frontend/deployment flow.
+ *
+ * =========================================================
+ */
+
 export const userAWSDetails = async (req, res) => {
   try {
     const {
@@ -105,9 +241,14 @@ export const userAWSDetails = async (req, res) => {
       deployment_url,
     } = req.body;
 
-    // -----------------------------------------
-    // Validation
-    // -----------------------------------------
+    console.log(
+      "AWS details received:",
+      req.body
+    );
+
+    // -----------------------------------------------------
+    // Validate required fields
+    // -----------------------------------------------------
 
     if (!github_user_id) {
       return res.status(400).json({
@@ -130,36 +271,47 @@ export const userAWSDetails = async (req, res) => {
       });
     }
 
-    // -----------------------------------------
-    // 1. Update AWS connection
-    // -----------------------------------------
+    // -----------------------------------------------------
+    // Update AWS connection
+    // -----------------------------------------------------
 
     const connectionResult = await sql`
       UPDATE public.aws_connections
       SET
-        aws_account_id = ${aws_account_id},
+        aws_account_id = ${String(aws_account_id)},
         aws_region = ${aws_region || "ap-south-1"},
         role_name = ${role_name || null},
         role_arn = ${role_arn},
         status = ${status || "connected"},
-        bootstrap_stack_name = ${bootstrap_stack_name || null},
+        bootstrap_stack_name =
+          ${bootstrap_stack_name || null},
         updated_at = now()
-      WHERE github_user_id = ${github_user_id}
+
+      WHERE github_user_id =
+        ${String(github_user_id)}
+
       RETURNING *;
     `;
 
     if (connectionResult.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "GitHub user connection not found",
+        message:
+          "GitHub user connection not found",
       });
     }
 
-    const connection = connectionResult[0];
+    const connection =
+      connectionResult[0];
 
-    // -----------------------------------------
-    // 2. Store deployment information
-    // -----------------------------------------
+    console.log(
+      "AWS connection updated:",
+      connection
+    );
+
+    // -----------------------------------------------------
+    // Store deployment information if supplied
+    // -----------------------------------------------------
 
     let deployment = null;
 
@@ -186,27 +338,40 @@ export const userAWSDetails = async (req, res) => {
         RETURNING *;
       `;
 
-      deployment = deploymentResult[0];
+      deployment =
+        deploymentResult[0];
+
+      console.log(
+        "Deployment information stored:",
+        deployment
+      );
     }
 
-    // -----------------------------------------
-    // 3. Return result
-    // -----------------------------------------
+    // -----------------------------------------------------
+    // Return result
+    // -----------------------------------------------------
 
     return res.status(200).json({
       success: true,
-      message: "AWS details updated successfully",
+      message:
+        "AWS details updated successfully",
       connection,
       deployment,
     });
 
   } catch (error) {
-    console.error("AWS details error:", error);
+    console.error(
+      "AWS details error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Failed to update AWS details",
-      error: error.message,
+      message:
+        "Failed to update AWS details",
+      error:
+        error.message ||
+        "Internal server error",
     });
   }
 };

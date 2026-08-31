@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import repositoryRoutes from "./routes/repositoryRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import awsConnectionRoutes from "./routes/awsConnectionRoutes.js";
 
 dotenv.config();
 
@@ -23,7 +24,8 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/repositories", repositoryRoutes);
-app.use("/api", userRoutes);
+app.use("/api/auth", userRoutes);
+app.use("/api/aws", awsConnectionRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

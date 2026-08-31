@@ -7,7 +7,7 @@ import {
 
 const router = express.Router();
 
-router.get("/users/:githubUserId", getUserProfile);
+router.get("/users/:github_user_id", getUserProfile);
 router.post("/github", loginViaGithub);
 router.post("/aws-details", userAWSDetails);
 
