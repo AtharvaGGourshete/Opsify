@@ -20,17 +20,11 @@ export function detectApplications(frameworks, packageData) {
   for (const pkg of packageData) {
     const directory = getDirectory(pkg.path);
 
-    const appFrameworks = frameworks.filter(
-      (framework) => framework.directory === directory
-    );
+    const appFrameworks = frameworks.filter((framework) => framework.directory === directory);
 
-    const frontendFramework = appFrameworks.find(
-      (framework) => FRONTEND_FRAMEWORKS.has(framework.framework)
-    );
+    const frontendFramework = appFrameworks.find((framework) => FRONTEND_FRAMEWORKS.has(framework.framework));
 
-    const backendFramework = appFrameworks.find(
-      (framework) => BACKEND_FRAMEWORKS.has(framework.framework)
-    );
+    const backendFramework = appFrameworks.find((framework) => BACKEND_FRAMEWORKS.has(framework.framework));
 
     if (frontendFramework) {
       applications.push({
@@ -41,7 +35,6 @@ export function detectApplications(frameworks, packageData) {
         packageManager: pkg.packageManager,
         runtime: "Node.js"
       });
-
       continue;
     }
 

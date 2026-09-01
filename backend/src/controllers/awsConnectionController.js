@@ -1,14 +1,7 @@
 import sql from "../config/database.js";
 import { randomUUID } from "crypto";
 
-const AWS_CONSOLE_URL =
-  "https://console.aws.amazon.com/cloudformation/home#/stacks/create/review";
-
-/*
- * =========================================================
- * ENVIRONMENT HELPERS
- * =========================================================
- */
+const AWS_CONSOLE_URL = "https://console.aws.amazon.com/cloudformation/home#/stacks/create/review";
 
 function getRequiredEnv(name) {
   const value = process.env[name];
@@ -19,12 +12,6 @@ function getRequiredEnv(name) {
 
   return value;
 }
-
-/*
- * =========================================================
- * BUILD CLOUDFORMATION LAUNCH URL
- * =========================================================
- */
 
 function buildLaunchUrl({
   templateUrl,
@@ -53,33 +40,7 @@ function buildLaunchUrl({
   return `${AWS_CONSOLE_URL}?${params.toString()}`;
 }
 
-/*
- * =========================================================
- * CREATE / REUSE AWS CONNECTION
- * =========================================================
- *
- * IMPORTANT:
- *
- * This endpoint does NOT modify the GitHub login/sync flow.
- *
- * If a GitHub row already exists:
- *   - preserve GitHub information
- *   - preserve connected AWS information
- *   - reuse pending connections
- *
- * If the GitHub row does NOT exist:
- *   - create the AWS connection row using github_user_id
- *   - GitHub fields remain NULL
- *
- * This prevents AWS setup from failing simply because the
- * GitHub synchronization request has not populated the row yet.
- * =========================================================
- */
-
-
-
 export const createAWSConnection = async (req, res) => {
-  console.log("🔥🔥🔥 NEW AWS CONTROLLER IS RUNNING 🔥🔥🔥");
   try {
     const {
       github_user_id,
@@ -87,19 +48,6 @@ export const createAWSConnection = async (req, res) => {
       github_repository,
       github_branch = "main",
     } = req.body;
-
-    console.log("AWS connection creation received:", {
-      github_user_id,
-      github_owner,
-      github_repository,
-      github_branch,
-    });
-
-    /*
-     * -------------------------------------------------------
-     * Validation
-     * -------------------------------------------------------
-     */
 
     if (!github_user_id) {
       return res.status(400).json({
@@ -122,26 +70,11 @@ export const createAWSConnection = async (req, res) => {
       });
     }
 
-    /*
-     * -------------------------------------------------------
-     * Required AWS / Opsify configuration
-     * -------------------------------------------------------
-     */
+    const templateUrl = getRequiredEnv("AWS_BOOTSTRAP_URL");
 
-    const templateUrl =
-      getRequiredEnv("AWS_BOOTSTRAP_URL");
+    const apiUrl = getRequiredEnv("OPSIFY_API_URL");
 
-    const apiUrl =
-      getRequiredEnv("OPSIFY_API_URL");
-
-    const callbackUrl =
-      `${apiUrl.replace(/\/$/, "")}/api/aws/connections/callback`;
-
-    /*
-     * -------------------------------------------------------
-     * Check existing connection
-     * -------------------------------------------------------
-     */
+    const callbackUrl = `${apiUrl.replace(/\/$/, "")}/api/aws/connections/callback`;
 
     const existingResult = await sql`
       SELECT *
@@ -152,25 +85,8 @@ export const createAWSConnection = async (req, res) => {
 
     const existing = existingResult[0];
 
-    /*
-     * -------------------------------------------------------
-     * CASE 1:
-     * AWS is already connected
-     *
-     * NEVER reset connected AWS information.
-     * -------------------------------------------------------
-     */
-
-    if (
-      existing &&
-      existing.status === "connected" &&
-      existing.aws_account_id &&
-      existing.role_arn
-    ) {
-      console.log(
-        "AWS connection already connected. Reusing existing connection:",
-        existing.connection_id
-      );
+    if (existing && existing.status === "connected" && existing.aws_account_id && existing.role_arn) {
+      console.log("AWS connection already connected. Reusing existing connection:",existing.connection_id);
 
       return res.status(200).json({
         success: true,
@@ -189,30 +105,10 @@ export const createAWSConnection = async (req, res) => {
         connection: existing,
       });
     }
+    if (existing && existing.status === "pending" && existing.connection_id && existing.bootstrap_stack_name) {
+      console.log("AWS connection already pending. Reusing:",existing.connection_id);
 
-    /*
-     * -------------------------------------------------------
-     * CASE 2:
-     * AWS bootstrap is already pending
-     *
-     * Reuse the existing connection instead of generating
-     * another UUID.
-     * -------------------------------------------------------
-     */
-
-    if (
-      existing &&
-      existing.status === "pending" &&
-      existing.connection_id &&
-      existing.bootstrap_stack_name
-    ) {
-      console.log(
-        "AWS connection already pending. Reusing:",
-        existing.connection_id
-      );
-
-      const launchUrl =
-        buildLaunchUrl({
+      const launchUrl = buildLaunchUrl({
           templateUrl,
 
           stackName:
@@ -250,50 +146,9 @@ export const createAWSConnection = async (req, res) => {
       });
     }
 
-    /*
-     * -------------------------------------------------------
-     * Generate new AWS connection
-     * -------------------------------------------------------
-     */
+    const connectionId = randomUUID();
 
-    const connectionId =
-      randomUUID();
-
-    const stackName =
-      `OpsifyBootstrap-${connectionId}`;
-
-    console.log(
-      "Creating NEW AWS connection:",
-      {
-        connectionId,
-        stackName,
-        github_user_id,
-        github_owner,
-        github_repository,
-        github_branch,
-        callbackUrl,
-      }
-    );
-
-    /*
-     * -------------------------------------------------------
-     * CASE 3:
-     * GitHub row DOES NOT EXIST
-     *
-     * IMPORTANT FIX:
-     *
-     * Do NOT use:
-     *
-     * INSERT ... SELECT FROM aws_connections
-     *
-     * because that requires a row to already exist.
-     *
-     * Instead, directly INSERT the AWS connection.
-     *
-     * GitHub fields remain NULL here.
-     * The GitHub population code is untouched.
-     * -------------------------------------------------------
-     */
+    const stackName = `OpsifyBootstrap-${connectionId}`;
 
     if (!existing) {
       const result = await sql`
@@ -367,18 +222,6 @@ export const createAWSConnection = async (req, res) => {
       });
     }
 
-    /*
-     * -------------------------------------------------------
-     * CASE 4:
-     * A row exists but is not currently connected/pending.
-     *
-     * Reuse the existing GitHub row and reset ONLY the AWS
-     * connection fields required for a new bootstrap.
-     *
-     * GitHub fields are NOT modified.
-     * -------------------------------------------------------
-     */
-
     const result = await sql`
       UPDATE public.aws_connections
       SET
@@ -398,22 +241,18 @@ export const createAWSConnection = async (req, res) => {
 
         updated_at = now()
 
-      WHERE github_user_id =
-        ${String(github_user_id)}
+      WHERE github_user_id = ${String(github_user_id)}
 
       RETURNING *;
     `;
 
     if (result.length === 0) {
-      throw new Error(
-        "AWS connection could not be initialized"
-      );
+      throw new Error("AWS connection could not be initialized");
     }
 
     const connection = result[0];
 
-    const launchUrl =
-      buildLaunchUrl({
+    const launchUrl = buildLaunchUrl({
         templateUrl,
         stackName,
         connectionId,
@@ -424,10 +263,7 @@ export const createAWSConnection = async (req, res) => {
         callbackUrl,
       });
 
-    console.log(
-      "Existing AWS connection reset for new bootstrap:",
-      connection
-    );
+    console.log("Existing AWS connection reset for new bootstrap:", connection);
 
     return res.status(200).json({
       success: true,
@@ -459,23 +295,9 @@ export const createAWSConnection = async (req, res) => {
   }
 };
 
-
-/*
- * =========================================================
- * AWS CLOUDFORMATION CALLBACK
- * =========================================================
- *
- * CloudFormation calls this after the bootstrap stack
- * creates the deployment role.
- * =========================================================
- */
-
 export const awsConnectionCallback = async (req, res) => {
   try {
-    console.log(
-      "AWS connection callback received:",
-      req.body
-    );
+    console.log("AWS connection callback received:", req.body);
 
     const {
       connection_id,
@@ -526,13 +348,7 @@ export const awsConnectionCallback = async (req, res) => {
     `;
 
     if (result.length === 0) {
-      console.error(
-        "AWS callback could not find connection:",
-        {
-          connection_id,
-          github_user_id,
-        }
-      );
+      console.error("AWS callback could not find connection:",{connection_id, github_user_id,});
 
       return res.status(404).json({
         success: false,
@@ -542,10 +358,7 @@ export const awsConnectionCallback = async (req, res) => {
 
     const connection = result[0];
 
-    console.log(
-      "AWS connection successfully updated:",
-      connection
-    );
+    console.log("AWS connection successfully updated:",connection);
 
     return res.status(200).json({
       success: true,

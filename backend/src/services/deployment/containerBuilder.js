@@ -48,19 +48,14 @@ function runDockerBuild({
       }
 
       reject(
-        new Error(
-          `Docker build failed with exit code ${code}.`
-        )
+        new Error(`Docker build failed with exit code ${code}.`)
       );
     });
   });
 }
 
-export async function buildContainerImage({
-  repositoryPath,
-  applicationDirectory,
-  imageTag
-}) {
+export async function buildContainerImage({ repositoryPath, applicationDirectory, imageTag }) {
+
   if (!repositoryPath) {
     throw new Error("Repository path is required.");
   }
@@ -73,48 +68,27 @@ export async function buildContainerImage({
     throw new Error("Docker image tag is required.");
   }
 
-  const applicationPath = path.resolve(
-    repositoryPath,
-    applicationDirectory
-  );
+  const applicationPath = path.resolve(repositoryPath, applicationDirectory);
 
-  const dockerfilePath = path.join(
-    applicationPath,
-    "Dockerfile"
-  );
+  const dockerfilePath = path.join(applicationPath, "Dockerfile");
 
-  const applicationExists = await fileExists(
-    applicationPath
-  );
+  const applicationExists = await fileExists(applicationPath);
 
   if (!applicationExists) {
-    throw new Error(
-      `Application directory does not exist: ${applicationDirectory}`
-    );
+    throw new Error(`Application directory does not exist: ${applicationDirectory}`);
   }
 
-  const dockerfileExists = await fileExists(
-    dockerfilePath
-  );
+  const dockerfileExists = await fileExists(dockerfilePath);
 
   if (!dockerfileExists) {
-    throw new Error(
-      `Dockerfile not found in application directory: ${applicationDirectory}`
-    );
+    throw new Error(`Dockerfile not found in application directory: ${applicationDirectory}`);
   }
 
-  console.log(
-    `Building Docker image: ${imageTag}`
-  );
+  console.log(`Building Docker image: ${imageTag}`);
 
-  console.log(
-    `Docker build context: ${applicationPath}`
-  );
+  console.log(`Docker build context: ${applicationPath}`);
 
-  await runDockerBuild({
-    applicationPath,
-    imageTag
-  });
+  await runDockerBuild({ applicationPath, imageTag });
 
   return {
     imageTag,

@@ -1,5 +1,5 @@
 export function buildAIContext(profile, repomixContext) {
-  return {
+  return { 
     repository: {
       url: profile.repository.url
     },

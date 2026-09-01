@@ -71,13 +71,9 @@ export function detectJavaScriptFrameworks(packageData) {
     ]);
 
     for (const rule of FRAMEWORK_RULES) {
-      const matchedDependencies = rule.dependencies.filter(
-        (dependency) => allDependencies.has(dependency)
-      );
+      const matchedDependencies = rule.dependencies.filter((dependency) => allDependencies.has(dependency));
 
-      if (matchedDependencies.length === 0) {
-        continue;
-      }
+      if (matchedDependencies.length === 0) {continue}
 
       detected.push({
         directory: getDirectory(pkg.path),

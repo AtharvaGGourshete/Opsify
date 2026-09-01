@@ -3,10 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 
 export async function generateRepositoryContext(repoPath) {
-  const outputFile = path.join(
-    path.dirname(repoPath),
-    "opsify-repomix.json"
-  );
+  const outputFile = path.join(path.dirname(repoPath), "opsify-repomix.json");
 
   const options = {
     output: outputFile,

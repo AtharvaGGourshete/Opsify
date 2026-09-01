@@ -47,9 +47,7 @@ export function detectDatabases(packageData) {
     ]);
 
     for (const rule of DATABASE_RULES) {
-      const evidence = rule.dependencies.filter(
-        (dependency) => dependencies.has(dependency)
-      );
+      const evidence = rule.dependencies.filter((dependency) => dependencies.has(dependency));
 
       if (evidence.length === 0) continue;
 

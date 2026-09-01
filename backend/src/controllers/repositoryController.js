@@ -1,7 +1,4 @@
-import {
-  cloneRepository,
-  cleanupRepository,
-} from "../services/repository/clone.js";
+import { cloneRepository, cleanupRepository } from "../services/repository/clone.js";
 import { scanRepository } from "../services/repository/scanner.js";
 import { detectLanguages } from "../services/repository/detectors/languageDetector.js";
 import { findPackageFiles } from "../services/repository/detectors/packageDetector.js";
@@ -17,21 +14,14 @@ import { saveRepositoryAnalysis, getLatestRepositoryAnalysis } from "../services
 function isValidGitHubUrl(url) {
   try {
     const parsed = new URL(url);
-
-    return (
-      parsed.hostname === "github.com" ||
-      parsed.hostname === "www.github.com"
-    );
+    return (parsed.hostname === "github.com" || parsed.hostname === "www.github.com");
   } catch {
     return false;
   }
 }
 
 export async function analyzeRepository(req, res) {
-  const {
-    url,
-    github_user_id
-  } = req.body;
+  const { url, github_user_id } = req.body;
 
   if (!github_user_id) {
     return res.status(400).json({
@@ -81,9 +71,7 @@ export async function analyzeRepository(req, res) {
       profile
     });
 
-    console.log(
-      `Repository analysis saved. Repository ID: ${savedAnalysis.repositoryId}, Scan ID: ${savedAnalysis.scanId}`
-    );
+    console.log(`Repository analysis saved. Repository ID: ${savedAnalysis.repositoryId}, Scan ID: ${savedAnalysis.scanId}`);
 
     return res.status(200).json({
       profile,
@@ -104,11 +92,7 @@ export async function analyzeRepository(req, res) {
 }
 
 export async function createDeploymentPlan(req, res) {
-  const {
-    profile,
-    applicationDirectory,
-    port
-  } = req.body;
+  const { profile, applicationDirectory, port } = req.body;
 
   if (!profile) {
     return res.status(400).json({
@@ -158,10 +142,7 @@ export async function getLatestRepositoryAnalysisController(req, res) {
   }
 
   try {
-    const result =
-      await getLatestRepositoryAnalysis(
-        github_user_id
-      );
+    const result = await getLatestRepositoryAnalysis(github_user_id);
 
     if (!result) {
       return res.status(404).json({

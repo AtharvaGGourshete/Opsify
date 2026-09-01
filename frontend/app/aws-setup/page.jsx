@@ -3,19 +3,11 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
-/* =========================================================
-   CONFIGURATION
-========================================================= */
-
 const githubConfig = {
   owner: process.env.NEXT_PUBLIC_GITHUB_OWNER,
   repository: process.env.NEXT_PUBLIC_GITHUB_REPOSITORY,
   branch: process.env.NEXT_PUBLIC_GITHUB_BRANCH || "main",
 };
-
-/* =========================================================
-   ICONS
-========================================================= */
 
 function GithubIcon() {
   return (
@@ -101,10 +93,6 @@ function InfoIcon() {
   );
 }
 
-/* =========================================================
-   SMALL UI COMPONENTS
-========================================================= */
-
 function StepNumber({ number }) {
   return (
     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/50 bg-[#58a4b0]/25 text-[10px] font-black text-black shadow-sm backdrop-blur-xl">
@@ -116,39 +104,11 @@ function StepNumber({ number }) {
 function CreationItem({ title, description }) {
   return (
     <div
-      className="
-        group
-        rounded-2xl
-        border
-        border-white/70
-        bg-white/50
-        p-5
-        shadow-sm
-        backdrop-blur-xl
-        transition-all
-        duration-300
-        hover:-translate-y-0.5
-        hover:bg-white/70
-        hover:shadow-md
-      "
+      className="group rounded-2xl border border-white/70 bg-white/50 p-5 shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/70 hover:shadow-md"
     >
       <div className="flex gap-4">
         <div
-          className="
-            flex
-            h-9
-            w-9
-            shrink-0
-            items-center
-            justify-center
-            rounded-xl
-            border
-            border-white/60
-            bg-[#58a4b0]/20
-            text-black
-            shadow-sm
-            backdrop-blur-xl
-          "
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/60 bg-[#58a4b0]/20 text-black shadow-sm backdrop-blur-xl"
         >
           <CheckIcon />
         </div>
@@ -167,10 +127,6 @@ function CreationItem({ title, description }) {
   );
 }
 
-/* =========================================================
-   AWS SETUP PAGE
-========================================================= */
-
 export default function AWSSetupPage() {
   const { data: session, status } = useSession();
 
@@ -181,53 +137,39 @@ export default function AWSSetupPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  /* =======================================================
-     CREATE AWS CONNECTION
-  ======================================================= */
-
   useEffect(() => {
     async function prepareAWSConnection() {
       if (status !== "authenticated") {
         return;
       }
 
-      const github_user_id =
-        session?.user?.githubId;
+      const github_user_id = session?.user?.githubId;
 
       if (!github_user_id) {
-        setError(
-          "GitHub user ID is missing from the active session. Sign out and sign in again with GitHub."
-        );
+        setError("GitHub user ID is missing from the active session. Sign out and sign in again with GitHub.");
 
         setLoading(false);
         return;
       }
 
-      const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
       if (!apiUrl) {
-        setError(
-          "NEXT_PUBLIC_API_URL is not configured."
-        );
+        setError("NEXT_PUBLIC_API_URL is not configured.");
 
         setLoading(false);
         return;
       }
 
       if (!githubConfig.owner) {
-        setError(
-          "NEXT_PUBLIC_GITHUB_OWNER is not configured."
-        );
+        setError("NEXT_PUBLIC_GITHUB_OWNER is not configured.");
 
         setLoading(false);
         return;
       }
 
       if (!githubConfig.repository) {
-        setError(
-          "NEXT_PUBLIC_GITHUB_REPOSITORY is not configured."
-        );
+        setError("NEXT_PUBLIC_GITHUB_REPOSITORY is not configured.");
 
         setLoading(false);
         return;
@@ -236,198 +178,59 @@ export default function AWSSetupPage() {
       try {
         setLoading(true);
         setError("");
+        console.log("Checking existing AWS connection...");
 
-        /* =====================================================
-           STEP 1
-           Check existing profile FIRST
-        ===================================================== */
-
-        console.log(
-          "Checking existing AWS connection..."
-        );
-
-        const profileResponse = await fetch(
-          `${apiUrl.replace(
-            /\/$/,
-            ""
-          )}/api/auth/users/${github_user_id}`,
+        const profileResponse = await fetch(`${apiUrl.replace(/\/$/,"")}/api/auth/users/${github_user_id}`,
           {
             cache: "no-store",
           }
         );
 
-        const profileData =
-          await profileResponse.json();
+        const profileData = await profileResponse.json();
 
-        console.log(
-          "Existing profile:",
-          profileData
-        );
-
-        /* =====================================================
-           STEP 2
-           If AWS is already connected, DO NOTHING
-        ===================================================== */
-
-        if (
-          profileResponse.ok &&
-          profileData?.profile?.status ===
-            "connected"
-        ) {
-          const profile =
-            profileData.profile;
-
-          console.log(
-            "AWS is already connected. No new connection will be created."
-          );
-
-          setConnectionId(
-            profile.connection_id || ""
-          );
-
-          setStackName(
-            profile.bootstrap_stack_name ||
-              ""
-          );
-
+        console.log("Existing profile:", profileData);
+        if (profileResponse.ok && profileData?.profile?.status === "connected") {
+          const profile = profileData.profile;
+          setConnectionId(profile.connection_id || "");
+          setStackName(profile.bootstrap_stack_name || "");
           setLaunchUrl("");
-
           setLoading(false);
-
           return;
         }
 
-        /* =====================================================
-           STEP 3
-           If AWS is pending, do NOT reset it
-        ===================================================== */
+        console.log("Creating or reusing AWS connection...");
 
-        /* =====================================================
-           STEP 4
-           Create / reuse AWS connection
-        ===================================================== */
+        const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/aws/connections`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ github_user_id, github_owner: githubConfig.owner, github_repository: githubConfig.repository, github_branch: githubConfig.branch }),
+        });
 
-        console.log(
-          "Creating or reusing AWS connection..."
-        );
-
-        const response = await fetch(
-          `${apiUrl.replace(
-            /\/$/,
-            ""
-          )}/api/aws/connections`,
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify({
-              github_user_id:
-                github_user_id,
-
-              github_owner:
-                githubConfig.owner,
-
-              github_repository:
-                githubConfig.repository,
-
-              github_branch:
-                githubConfig.branch,
-            }),
-          }
-        );
-
-        const data =
-          await response.json();
-
-        console.log(
-          "AWS connection response:",
-          data
-        );
-
-        if (!response.ok) {
-          throw new Error(
-            data.message ||
-              "Failed to create AWS connection."
-          );
-        }
-
-        /* =====================================================
-           STEP 5
-           Existing connected connection
-        ===================================================== */
-
+        const data = await response.json();
+        console.log("AWS connection response:", data);
+        if (!response.ok) throw new Error(data.message || "Failed to create AWS connection.");
         if (data.status === "connected") {
-          setConnectionId(
-            data.connectionId || ""
-          );
-
-          setStackName(
-            data.stackName || ""
-          );
-
+          setConnectionId(data.connectionId || "");
+          setStackName(data.stackName || "");
           setLaunchUrl("");
-
           setLoading(false);
-
           return;
         }
-
-        /* =====================================================
-           STEP 6
-           Pending connection
-        ===================================================== */
-
         if (data.alreadyConnected) {
-          console.log(
-            "AWS account is already connected:",
-            data.connection
-          );
-
-          setConnectionId(
-            data.connectionId || ""
-          );
-
-          setStackName(
-            data.stackName || ""
-          );
-
+          console.log("AWS account is already connected:", data.connection);
+          setConnectionId(data.connectionId || "");
+          setStackName(data.stackName || "");
           setLaunchUrl("");
-
           return;
         }
 
-        if (!data.launchUrl) {
-          throw new Error(
-            "AWS connection was created, but no CloudFormation launch URL was returned."
-          );
-        }
-
-        setLaunchUrl(
-          data.launchUrl
-        );
-
-        setConnectionId(
-          data.connectionId || ""
-        );
-
-        setStackName(
-          data.stackName || ""
-        );
+        if (!data.launchUrl) throw new Error("AWS connection was created, but no CloudFormation launch URL was returned.");
+        setLaunchUrl(data.launchUrl);
+        setConnectionId(data.connectionId || "");
+        setStackName(data.stackName || "");
       } catch (err) {
-        console.error(
-          "AWS connection preparation failed:",
-          err
-        );
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to prepare AWS connection."
-        );
+        console.error("AWS connection preparation failed:", err);
+        setError(err instanceof Error ? err.message : "Failed to prepare AWS connection.");
       } finally {
         setLoading(false);
       }
@@ -436,34 +239,15 @@ export default function AWSSetupPage() {
     prepareAWSConnection();
   }, [status, session]);
 
-  /* =======================================================
-     AUTHENTICATION LOADING
-  ======================================================= */
-
   if (status === "loading") {
     return (
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#cdedf6] px-6 py-12 text-black">
-
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-white/40 blur-3xl" />
           <div className="absolute -bottom-40 -right-32 h-[500px] w-[500px] rounded-full bg-[#58a4b0]/20 blur-3xl" />
         </div>
 
-        <div
-          className="
-            relative
-            w-full
-            max-w-lg
-            rounded-[2rem]
-            border
-            border-white/70
-            bg-white/50
-            p-10
-            text-center
-            shadow-[0_30px_100px_-40px_rgba(0,0,0,0.25)]
-            backdrop-blur-2xl
-          "
-        >
+        <div className="relative w-full max-w-lg rounded-[2rem] border border-white/70 bg-white/50 p-10 text-center shadow-[0_30px_100px_-40px_rgba(0,0,0,0.25)] backdrop-blur-2xl">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/50 bg-[#58a4b0]/30 text-black shadow-sm backdrop-blur-xl">
             <CloudIcon />
           </div>
@@ -484,35 +268,15 @@ export default function AWSSetupPage() {
     );
   }
 
-  /* =======================================================
-     NOT AUTHENTICATED
-  ======================================================= */
-
   if (!session?.user) {
     return (
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#cdedf6] px-6 py-12 text-black">
-
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-1/2 top-0 h-[500px] w-[700px] -translate-x-1/2 rounded-full bg-white/40 blur-3xl" />
-
           <div className="absolute -bottom-40 -left-32 h-[450px] w-[450px] rounded-full bg-[#58a4b0]/20 blur-3xl" />
         </div>
 
-        <div
-          className="
-            relative
-            w-full
-            max-w-lg
-            rounded-[2rem]
-            border
-            border-white/70
-            bg-white/50
-            p-8
-            shadow-[0_30px_100px_-40px_rgba(0,0,0,0.25)]
-            backdrop-blur-2xl
-            md:p-10
-          "
-        >
+        <div className="relative w-full max-w-lg rounded-[2rem] border border-white/70 bg-white/50 p-8 shadow-[0_30px_100px_-40px_rgba(0,0,0,0.25)] backdrop-blur-2xl md:p-10">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/50 bg-black text-white shadow-lg">
             <GithubIcon />
           </div>
@@ -539,35 +303,16 @@ export default function AWSSetupPage() {
     );
   }
 
-  /* =======================================================
-     ERROR
-  ======================================================= */
-
   if (error) {
     return (
       <main className="relative min-h-screen overflow-hidden bg-[#cdedf6] px-5 py-10 text-black md:px-8 md:py-7">
-
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-white/40 blur-3xl" />
-
           <div className="absolute -bottom-40 -right-32 h-[500px] w-[500px] rounded-full bg-[#58a4b0]/20 blur-3xl" />
         </div>
-
         <div className="relative mx-auto flex min-h-[80vh] max-w-3xl items-center justify-center">
 
-          <div
-            className="
-              w-full
-              rounded-[2rem]
-              border
-              border-red-200/70
-              bg-white/55
-              p-8
-              shadow-[0_30px_100px_-40px_rgba(0,0,0,0.25)]
-              backdrop-blur-2xl
-              md:p-12
-            "
-          >
+          <div className="w-full rounded-[2rem] border border-red-200/70 bg-white/55 p-8 shadow-[0_30px_100px_-40px_rgba(0,0,0,0.25)] backdrop-blur-2xl md:p-12">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-200/70 bg-red-50/70 text-red-600 backdrop-blur-xl">
               <InfoIcon />
             </div>
@@ -596,396 +341,144 @@ export default function AWSSetupPage() {
     );
   }
 
-  /* =======================================================
-     MAIN PAGE
-  ======================================================= */
-
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#cdedf6] px-5 py-10 text-black md:px-8 md:py-8">
-
-      {/* =====================================================
-          BACKGROUND GLASS EFFECTS
-      ===================================================== */}
-
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-
         <div className="absolute -left-40 -top-40 h-[600px] w-[600px] rounded-full bg-white/40 blur-3xl" />
-
         <div className="absolute left-1/2 top-1/3 h-[500px] w-[700px] -translate-x-1/2 rounded-full bg-white/20 blur-3xl" />
-
         <div className="absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-[#58a4b0]/25 blur-3xl" />
-
       </div>
 
       <div className="relative mx-auto max-w-5xl">
+        <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/45 shadow-[0_30px_100px_-40px_rgba(0,0,0,0.25)] backdrop-blur-2xl backdrop-saturate-150">
 
-        {/* ===================================================
-            MAIN GLASS CARD
-        =================================================== */}
-
-        <div
-          className="
-            overflow-hidden
-            rounded-[2rem]
-            border
-            border-white/70
-            bg-white/45
-            shadow-[0_30px_100px_-40px_rgba(0,0,0,0.25)]
-            backdrop-blur-2xl
-            backdrop-saturate-150
-          "
-        >
-
-          {/* =================================================
-              HERO
-          ================================================= */}
-
-          <div
-            className="
-              relative
-              overflow-hidden
-              bg-[#58a4b0]/85
-              px-7
-              py-9
-              text-black
-              backdrop-blur-xl
-              md:px-10
-              md:py-11
-            "
-          >
+          <div className="relative overflow-hidden bg-[#58a4b0]/85 px-7 py-9 text-black backdrop-blur-xl md:px-10 md:py-11">
 
             <div className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-white/15 blur-3xl" />
 
             <div className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
 
             <div className="relative">
-
               <div className="flex items-center gap-3">
-
-                <div
-                  className="
-                    flex
-                    h-12
-                    w-12
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    border
-                    border-white/50
-                    bg-white/20
-                    text-black
-                    shadow-sm
-                    backdrop-blur-xl
-                  "
-                >
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/50 bg-white/20 text-black shadow-sm backdrop-blur-xl">
                   <CloudIcon />
                 </div>
-
                 <div>
-                  <p className="text-sm font-semibold text-black/70">
-                    AWS account connection
-                  </p>
+                  <p className="text-sm font-semibold text-black/70">AWS account connection</p>
                 </div>
-
               </div>
 
-              <h1 className="mt-8 max-w-2xl text-4xl font-black tracking-[-0.04em] text-black md:text-5xl">
-                Connect your AWS account
-              </h1>
-
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-white md:text-base">
-                Deploy faster and safer.
-              </p>
-
+              <h1 className="mt-8 max-w-2xl text-4xl font-black tracking-[-0.04em] text-black md:text-5xl">Connect your AWS account</h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white md:text-base">Deploy faster and safer.</p>
             </div>
 
           </div>
-
-          {/* =================================================
-              CONTENT
-          ================================================= */}
-
           <div className="bg-white/25 p-7 backdrop-blur-xl md:p-10">
 
-            {/* =================================================
-                GITHUB CONFIGURATION
-            ================================================= */}
-
             <section>
-
               <div className="mb-5 flex items-center gap-3">
-
                 <StepNumber number="01" />
-
                 <div>
-                  <h2 className="mt-0.5 text-xl font-black tracking-tight text-black">
-                    GitHub configuration
-                  </h2>
+                  <h2 className="mt-0.5 text-xl font-black tracking-tight text-black">GitHub configuration</h2>
                 </div>
-
               </div>
 
-              <div
-                className="
-                  rounded-2xl
-                  border
-                  border-white/70
-                  bg-white/45
-                  p-5
-                  shadow-sm
-                  backdrop-blur-xl
-                  md:p-6
-                "
-              >
+              <div className="rounded-2xl border border-white/70 bg-white/45 p-5 shadow-sm backdrop-blur-xl md:p-6">
 
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-
                   <div className="flex min-w-0 items-center gap-4">
-
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/40 bg-black/90 text-white shadow-sm">
                       <GithubIcon />
                     </div>
-
                     <div className="min-w-0">
-
-                      <p className="text-xs text-black/40">
-                        Repository
-                      </p>
-
-                      <p className="mt-1 truncate font-mono text-sm font-bold text-black">
-                        {githubConfig.owner || "Not configured"}/
-                        {githubConfig.repository || "Not configured"}
-                      </p>
-
+                      <p className="text-xs text-black/40">Repository</p>
+                      <p className="mt-1 truncate font-mono text-sm font-bold text-black">{githubConfig.owner || "Not configured"}/{githubConfig.repository || "Not configured"}</p>
                     </div>
-
                   </div>
-
                   <div className="shrink-0 rounded-xl border border-white/70 bg-white/60 px-4 py-3 shadow-sm backdrop-blur-xl">
-
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-black/40">
-                      Branch
-                    </p>
-
-                    <p className="mt-1 font-mono text-xs font-semibold text-black/70">
-                      {githubConfig.branch}
-                    </p>
-
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-black/40">Branch</p>
+                    <p className="mt-1 font-mono text-xs font-semibold text-black/70">{githubConfig.branch}</p>
                   </div>
-
                 </div>
 
               </div>
 
             </section>
-
             <div className="my-9 border-t border-black/10" />
-
-            {/* =================================================
-                WHAT WILL BE CREATED
-            ================================================= */}
-
             <section>
-
               <div className="mb-5 flex items-center gap-3">
-
                 <StepNumber number="02" />
-
                 <div>
-                  <h2 className="mt-0.5 text-xl font-black tracking-tight text-black">
-                    What will be created?
-                  </h2>
+                  <h2 className="mt-0.5 text-xl font-black tracking-tight text-black">What will be created?</h2>
                 </div>
-
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-
-                <CreationItem
-                  title="Deployment IAM role"
-                  description="Dedicated role for Opsify deployments."
-                />
-
-                <CreationItem
-                  title="GitHub OIDC trust"
-                  description="Uses the existing GitHub Actions OIDC provider."
-                />
-
-                <CreationItem
-                  title="SAM deployment permissions"
-                  description="Permissions required for application deployment."
-                />
-
-                <CreationItem
-                  title="Connection registration"
-                  description="Automatically registers the AWS connection with Opsify."
-                />
-
+                <CreationItem title="Deployment IAM role" description="Dedicated role for Opsify deployments." />
+                <CreationItem title="GitHub OIDC trust" description="Uses the existing GitHub Actions OIDC provider." />
+                <CreationItem title="SAM deployment permissions" description="Permissions required for application deployment." />
+                <CreationItem title="Connection registration" description="Automatically registers the AWS connection with Opsify." />
               </div>
 
             </section>
-
-            {/* =================================================
-                CONNECTION INFORMATION
-            ================================================= */}
-
             {(connectionId || stackName) && (
               <>
                 <div className="my-9 border-t border-black/10" />
-
                 <section>
-
                   <div className="mb-5 flex items-center gap-3">
-
                     <StepNumber number="03" />
-
                     <div>
-                      <h2 className="mt-0.5 text-xl font-black tracking-tight text-black">
-                        Connection prepared
-                      </h2>
+                      <h2 className="mt-0.5 text-xl font-black tracking-tight text-black">Connection prepared</h2>
                     </div>
-
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
-
                     {connectionId && (
-                      <div
-                        className="
-                          rounded-2xl
-                          border
-                          border-white/70
-                          bg-white/45
-                          p-5
-                          shadow-sm
-                          backdrop-blur-xl
-                        "
-                      >
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-black/40">
-                          Connection ID
-                        </p>
-
-                        <p className="mt-2 break-all font-mono text-xs font-semibold text-black/70">
-                          {connectionId}
-                        </p>
+                      <div className="rounded-2xl border border-white/70 bg-white/45 p-5 shadow-sm backdrop-blur-xl">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-black/40">Connection ID</p>
+                        <p className="mt-2 break-all font-mono text-xs font-semibold text-black/70">{connectionId}</p>
                       </div>
                     )}
-
                     {stackName && (
-                      <div
-                        className="
-                          rounded-2xl
-                          border
-                          border-white/70
-                          bg-white/45
-                          p-5
-                          shadow-sm
-                          backdrop-blur-xl
-                        "
-                      >
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-black/40">
-                          Bootstrap Stack
-                        </p>
-
-                        <p className="mt-2 break-all font-mono text-xs font-semibold text-black/70">
-                          {stackName}
-                        </p>
+                      <div className="rounded-2xl border border-white/70 bg-white/45 p-5 shadow-sm backdrop-blur-xl">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-black/40">Bootstrap Stack</p>
+                        <p className="mt-2 break-all font-mono text-xs font-semibold text-black/70">{stackName}</p>
                       </div>
                     )}
-
                   </div>
 
                 </section>
               </>
             )}
-
-            {/* =================================================
-                CTA
-            ================================================= */}
-
             <div className="mt-8">
 
               {launchUrl ? (
-                <a
-                  href={launchUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="
-                    group
-                    flex
-                    w-full
-                    items-center
-                    justify-center
-                    gap-3
-                    rounded-2xl
-                    bg-black
-                    px-6
-                    py-4
-                    text-sm
-                    font-bold
-                    text-white
-                    shadow-lg
-                    shadow-black/10
-                    transition-all
-                    duration-300
-                    hover:bg-black/85
-                    hover:shadow-xl
-                  "
-                >
-                  <span>
-                    Launch AWS CloudFormation
-                  </span>
-
+                <a href={launchUrl} target="_blank" rel="noopener noreferrer" className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-black px-6 py-4 text-sm font-bold text-white shadow-lg shadow-black/10 transition-all duration-300 hover:bg-black/85 hover:shadow-xl">
+                  <span>Launch AWS CloudFormation</span>
                   <ArrowIcon />
                 </a>
               ) : (
-                <div
-                  className="
-                    flex
-                    w-full
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    border
-                    border-white/60
-                    bg-white/50
-                    px-6
-                    py-4
-                    text-sm
-                    font-bold
-                    text-black/60
-                    shadow-sm
-                    backdrop-blur-xl
-                  "
-                >
+                <div className="flex w-full items-center justify-center rounded-2xl border border-white/60 bg-white/50 px-6 py-4 text-sm font-bold text-black/60 shadow-sm backdrop-blur-xl">
                   AWS account already connected
                 </div>
               )}
-
               <div className="mt-4 flex items-start justify-center gap-2 px-4">
-
                 <div className="mt-0.5 text-black/40">
                   <InfoIcon />
                 </div>
-
                 <p className="max-w-xl text-center text-xs leading-5 text-black/40">
                   You&apos;ll be redirected to AWS to review and create the
                   CloudFormation stack. Once created, Opsify will automatically
                   register the AWS connection.
                 </p>
-
               </div>
 
             </div>
-
           </div>
-
         </div>
-
         <p className="mt-6 text-center text-[11px] font-medium text-black/40">
           Opsify securely connects your GitHub deployment workflow to AWS.
         </p>
-
       </div>
     </main>
   );

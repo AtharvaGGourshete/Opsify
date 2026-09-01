@@ -9,9 +9,7 @@ function buildApiUrl(path) {
 
 
 export const saveGithubUser = async (githubData) => {
-  const response = await fetch(
-    buildApiUrl("/api/auth/github"),
-    {
+  const response = await fetch(buildApiUrl("/api/auth/github"),{
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -23,21 +21,15 @@ export const saveGithubUser = async (githubData) => {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      data.message ||
-        "Failed to save GitHub user"
-    );
+    throw new Error(data.message || "Failed to save GitHub user");
   }
 
   return data;
 };
 
 
-export const getUserProfile = async (
-  github_user_id
-) => {
-  const response = await fetch(
-    buildApiUrl(`/api/auth/users/${github_user_id}`),
+export const getUserProfile = async (github_user_id) => {
+  const response = await fetch(buildApiUrl(`/api/auth/users/${github_user_id}`),
     {
       cache: "no-store",
     }
@@ -46,10 +38,7 @@ export const getUserProfile = async (
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      data.message ||
-        "Failed to fetch user profile"
-    );
+    throw new Error(data.message || "Failed to fetch user profile");
   }
 
   return data;
@@ -57,9 +46,8 @@ export const getUserProfile = async (
 
 
 export const saveAWSDetails = async (awsData) => {
-  const response = await fetch(
-    buildApiUrl("/api/auth/aws-details"),
-    {
+  const response = await fetch(buildApiUrl("/api/auth/aws-details"),
+  {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
