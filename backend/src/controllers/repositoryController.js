@@ -12,6 +12,7 @@ import { detectInfrastructure } from "../services/repository/detectors/infrastru
 import { buildRepositoryProfile } from "../services/repository/profileBuilder.js";
 import { generateRepositoryContext } from "../services/repository/context/repomix.js";
 import { createDeploymentSpecification } from "../services/deployment/deploymentPlanner.js";
+import { saveRepositoryAnalysis, getLatestRepositoryAnalysis } from "../services/repository/repositoryAnalysisRepository.js";
 
 function isValidGitHubUrl(url) {
   try {
@@ -27,7 +28,16 @@ function isValidGitHubUrl(url) {
 }
 
 export async function analyzeRepository(req, res) {
-  const { url } = req.body;
+  const {
+    url,
+    github_user_id
+  } = req.body;
+
+  if (!github_user_id) {
+    return res.status(400).json({
+      error: "GitHub user ID is required.",
+    });
+  }
 
   if (!url) {
     return res.status(400).json({
@@ -63,10 +73,23 @@ export async function analyzeRepository(req, res) {
       databases,
       infrastructure
     });
-    console.log(JSON.stringify(profile, null, 2));
+
+    const savedAnalysis = await saveRepositoryAnalysis({
+      githubUserId: github_user_id,
+      repositoryUrl: url,
+      files,
+      profile
+    });
+
+    console.log(
+      `Repository analysis saved. Repository ID: ${savedAnalysis.repositoryId}, Scan ID: ${savedAnalysis.scanId}`
+    );
+
     return res.status(200).json({
       profile,
-      context: repositoryContext.context
+      context: repositoryContext.context,
+      repositoryId: savedAnalysis.repositoryId,
+      scanId: savedAnalysis.scanId
     });
   } catch (error) {
     console.error("Repository analysis failed:", error);
@@ -121,6 +144,42 @@ export async function createDeploymentPlan(req, res) {
     return res.status(400).json({
       error: "Deployment planning failed.",
       message: error.message
+    });
+  }
+}
+
+export async function getLatestRepositoryAnalysisController(req, res) {
+  const { github_user_id } = req.query;
+
+  if (!github_user_id) {
+    return res.status(400).json({
+      error: "GitHub user ID is required.",
+    });
+  }
+
+  try {
+    const result =
+      await getLatestRepositoryAnalysis(
+        github_user_id
+      );
+
+    if (!result) {
+      return res.status(404).json({
+        error: "No repository analysis found.",
+      });
+    }
+
+    return res.status(200).json(result);
+
+  } catch (error) {
+    console.error(
+      "Failed to load repository analysis:",
+      error
+    );
+
+    return res.status(500).json({
+      error: "Failed to load repository analysis.",
+      message: error.message,
     });
   }
 }

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 
 const icons = {
   github: (
@@ -118,12 +119,58 @@ const icons = {
 };
 
 export default function DeployPage() {
+  const { data: session } = useSession();
+
   const [url, setUrl] = useState("");
   const [context, setContext] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    async function loadLatestAnalysis() {
+      const githubUserId = session?.user?.githubId;
+
+      if (!githubUserId) {
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `http://localhost:5000/api/repositories/latest?github_user_id=${encodeURIComponent(
+            githubUserId
+          )}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (response.status === 404) {
+          return;
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Failed to load repository analysis."
+          );
+        }
+
+        setProfile(data.profile);
+
+        setUrl(data.profile.repository.url);
+      } catch (error) {
+        console.error(
+          "Failed to restore repository analysis:",
+          error
+        );
+      }
+    }
+
+    loadLatestAnalysis();
+  }, [session]);
 
   async function analyzeRepository() {
     if (!url.trim()) {
@@ -146,6 +193,7 @@ export default function DeployPage() {
           },
           body: JSON.stringify({
             url: url.trim(),
+            github_user_id: session?.user?.githubId,
           }),
         }
       );
@@ -167,6 +215,14 @@ export default function DeployPage() {
     }
   }
 
+  function clearAnalysis() {
+    setProfile(null);
+    setContext(null);
+    setUrl("");
+    setError("");
+    setCopied(false);
+  }
+
   async function copyContext() {
     const value =
       typeof context === "string"
@@ -183,7 +239,7 @@ export default function DeployPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white text-black">
+    <main className="min-h-screen bg-[#cdedf6] text-black">
 
       {/* Background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
@@ -201,10 +257,6 @@ export default function DeployPage() {
 
       <div className="mx-auto max-w-7xl px-5 py-12 md:px-8 md:py-16">
 
-        {/* =====================================================
-            HERO
-        ===================================================== */}
-
         <header className="mb-16">
 
           <div className="flex flex-col justify-between gap-10 md:flex-row md:items-end">
@@ -215,22 +267,22 @@ export default function DeployPage() {
 
                 <Badge
                   variant="outline"
-                  className="border-zinc-200 bg-zinc-50 px-4 py-1.5 text-sm font-semibold text-black"
+                  className="border-black bg-[#58a4b0]/40 px-4 py-3 text-sm font-semibold text-black"
                 >
                   Repository Intelligence
                 </Badge>
 
               </div>
 
-              <h1 className="text-5xl font-black leading-[0.92] tracking-[-0.06em] text-black sm:text-6xl md:text-7xl lg:text-8xl">
+              <h1 className="text-5xl leading-[0.92] tracking-[-0.06em] text-[#58a4b0] sm:text-6xl md:text-7xl lg:text-8xl">
                 Understand your
                 <br />
-                <span className="text-black/35">
+                <span className="text-black">
                   application.
                 </span>
               </h1>
 
-              <p className="mt-7 max-w-2xl text-base font-medium leading-7 text-zinc-600 sm:text-lg md:text-xl md:leading-8">
+              <p className="mt-7 max-w-2xl text-base font-small leading-7 text-black sm:text-lg md:text-xl md:leading-8">
                 Analyze a GitHub repository to discover its technology
                 stack, applications, dependencies and infrastructure.
               </p>
@@ -238,7 +290,7 @@ export default function DeployPage() {
             </div>
 
             {profile && (
-              <Badge className="w-fit shrink-0 border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">
+              <Badge className="w-fit shrink-0 border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">
                 <span className="mr-2 h-2 w-2 rounded-full bg-emerald-500" />
                 Analysis complete
               </Badge>
@@ -257,12 +309,7 @@ export default function DeployPage() {
 
             <div className="mb-7 flex items-center gap-4">
 
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-black">
-                {icons.github}
-              </div>
-
               <div>
-
                 <h2 className="text-xl font-bold tracking-tight text-black">
                   Analyze repository
                 </h2>
@@ -270,7 +317,6 @@ export default function DeployPage() {
                 <p className="mt-1 text-sm text-zinc-500">
                   Paste a public GitHub repository URL
                 </p>
-
               </div>
 
             </div>
@@ -304,7 +350,7 @@ export default function DeployPage() {
               <Button
                 onClick={analyzeRepository}
                 disabled={loading}
-                className="h-14 rounded-xl bg-black px-7 text-base font-bold text-white hover:bg-zinc-800"
+                className="h-14 rounded-xl bg-black px-7 text-base font-bold text-white hover:bg-zinc-800 cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -381,15 +427,21 @@ export default function DeployPage() {
                         GitHub repository
                       </div>
 
-                      <p className="mt-3 truncate text-base font-semibold text-black">
-                        {profile.repository.url}
+                      <p className="mt-3 truncate text-base font-semibold text-black hover:underline">
+                        <Link
+                          href={profile.repository.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {profile.repository.url}
+                        </Link>
                       </p>
 
                     </div>
 
                     <Badge
                       variant="outline"
-                      className="w-fit border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-black"
+                      className="w-fit bg-[#cdedf6] px-3 py-3 text-sm font-medium text-black"
                     >
                       Repository analyzed
                     </Badge>
@@ -456,21 +508,11 @@ export default function DeployPage() {
                         <div className="min-w-0">
 
                           <p className="text-xl font-black tracking-tight text-black">
-                            {application.name}
-                          </p>
-
-                          <p className="mt-2 truncate font-mono text-sm text-zinc-400">
-                            {application.directory}
+                            {application.name.charAt(0).toUpperCase() +
+                              application.name.slice(1)}
                           </p>
 
                         </div>
-
-                        <Badge
-                          variant="outline"
-                          className="shrink-0 border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-black"
-                        >
-                          {application.type}
-                        </Badge>
 
                       </div>
 
@@ -529,7 +571,7 @@ export default function DeployPage() {
                               {language.language}
                             </span>
 
-                            <span className="font-mono text-sm text-zinc-500">
+                            <span className="text-sm text-zinc-500">
                               {language.fileCount} files
                             </span>
 
@@ -538,7 +580,7 @@ export default function DeployPage() {
                           <div className="h-2.5 overflow-hidden rounded-full bg-zinc-100">
 
                             <div
-                              className="h-full rounded-full bg-black transition-all"
+                              className="h-full rounded-full bg-[#58a4b0] transition-all"
                               style={{
                                 width: `${Math.max(
                                   8,
@@ -637,7 +679,8 @@ export default function DeployPage() {
                         <div className="min-w-0">
 
                           <h3 className="text-lg font-bold text-black">
-                            {dependency.directory}
+                            {dependency.directory.charAt(0).toUpperCase(0) +
+                              dependency.directory.slice(1)}
                           </h3>
 
                           <p className="mt-2 truncate font-mono text-sm text-zinc-400">
@@ -645,13 +688,6 @@ export default function DeployPage() {
                           </p>
 
                         </div>
-
-                        <Badge
-                          variant="outline"
-                          className="shrink-0 border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-black"
-                        >
-                          {dependency.packageManager}
-                        </Badge>
 
                       </div>
 
@@ -669,7 +705,7 @@ export default function DeployPage() {
                           ].map((item) => (
                             <span
                               key={item}
-                              className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 font-mono text-xs font-medium text-zinc-700"
+                              className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 font-mono text-xs font-medium text-zinc-700 hover:bg-[#58a4b0] hover:text-white transition cursor-pointer"
                             >
                               {item}
                             </span>
@@ -694,65 +730,105 @@ export default function DeployPage() {
 
               <SectionHeading
                 eyebrow="Detection"
-                title="Why Opsify thinks this"
+                title="Evidence"
                 number="06"
               />
 
-              <Card className="border-zinc-200 bg-white shadow-sm">
+              <Card className="overflow-hidden border-zinc-200 bg-white shadow-sm">
 
                 <CardContent className="divide-y divide-zinc-100 p-0">
 
-                  {profile.evidence.map((item, index) => (
-                    <div
-                      key={`${item.source}-${index}`}
-                      className="flex flex-col gap-6 p-7 md:flex-row md:items-center md:justify-between"
-                    >
+                  {profile.evidence.map((item, index) => {
 
-                      <div className="flex items-start gap-4">
+                    const confidence =
+                      Math.round(item.confidence * 100);
 
-                        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                          {icons.check}
-                        </div>
+                    return (
+                      <div
+                        key={`${item.source}-${index}`}
+                        className="group p-6 transition-colors duration-200 hover:bg-zinc-50/70 md:p-7"
+                      >
 
-                        <div>
+                        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 
-                          <p className="text-base font-bold text-black">
-                            {item.technology}
-                          </p>
+                          {/* Left */}
 
-                          <p className="mt-2 text-sm leading-6 text-zinc-600">
-                            {item.reason}
-                          </p>
+                          <div className="flex min-w-0 items-start gap-4">
 
-                          <p className="mt-3 font-mono text-xs text-zinc-400">
-                            SOURCE: {item.source}
-                          </p>
+                            <div className="min-w-0">
+
+                              {/* Technology */}
+
+                              <div className="flex flex-wrap items-center gap-3">
+
+                                <h3 className="text-lg font-bold tracking-tight text-black">
+                                  {item.technology}
+                                </h3>
+
+                                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-700">
+                                  Detected
+                                </span>
+
+                              </div>
+
+                              {/* Reason */}
+
+                              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
+                                {item.reason}
+                              </p>
+
+                              {/* Source */}
+
+                              <div className="mt-4 inline-flex max-w-full items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+
+                                <span className="max-w-[300px] truncate font-mono text-xs font-medium text-zinc-600">
+                                  {item.source}
+                                </span>
+
+                              </div>
+
+                            </div>
+
+                          </div>
+
+                          {/* Right */}
+
+                          <div className="flex items-center gap-5 lg:w-44 lg:flex-col lg:items-end lg:gap-2">
+
+                            <div className="flex items-baseline gap-1">
+
+                              <span className="text-3xl font-black tracking-tight text-black">
+                                {confidence}
+                              </span>
+
+                              <span className="text-sm font-bold text-zinc-400">
+                                %
+                              </span>
+
+                            </div>
+
+                            <div className="w-full max-w-44">
+
+                              <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+
+                                <div
+                                  className="h-full rounded-full bg-emerald-500 transition-all duration-700"
+                                  style={{
+                                    width: `${confidence}%`,
+                                  }}
+                                />
+
+                              </div>
+
+                            </div>
+
+                          </div>
 
                         </div>
 
                       </div>
-
-                      <div className="flex items-center gap-4 md:flex-col md:items-end">
-
-                        <span className="text-2xl font-black text-black">
-                          {Math.round(item.confidence * 100)}%
-                        </span>
-
-                        <div className="h-2 w-36 overflow-hidden rounded-full bg-zinc-100">
-
-                          <div
-                            className="h-full rounded-full bg-emerald-500"
-                            style={{
-                              width: `${item.confidence * 100}%`,
-                            }}
-                          />
-
-                        </div>
-
-                      </div>
-
-                    </div>
-                  ))}
+                    );
+                  })}
 
                 </CardContent>
               </Card>
@@ -760,87 +836,44 @@ export default function DeployPage() {
             </section>
 
             {/* =================================================
-                RAW CONTEXT
+                BOTTOM ACTIONS
             ================================================= */}
 
-            {context && (
-              <section>
+            <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 pt-8 sm:flex-row sm:items-center sm:justify-center">
 
-                <SectionHeading
-                  eyebrow="Repomix"
-                  title="Repository context"
-                  number="07"
-                />
+              <Button
+                type="button"
+                onClick={clearAnalysis}
+                variant="outline"
+                className="h-12 rounded-xl px-7 font-semibold text-black cursor-pointer hover:bg-zinc-100"
+              >
+                Clear Analysis
+              </Button>
 
-                <Card className="overflow-hidden border-zinc-200 bg-white shadow-sm">
+              <Link href="/deploy/configurations">
+                <Button
+                  type="button"
+                  className="h-12 w-full rounded-xl bg-black px-8 text-base font-bold text-white hover:bg-zinc-800 sm:w-auto cursor-pointer"
+                >
+                  Proceed
 
-                  <div className="flex flex-col justify-between gap-5 border-b border-zinc-200 bg-zinc-50 px-6 py-5 sm:flex-row sm:items-center">
+                  <span className="ml-2">
+                    {icons.arrow}
+                  </span>
 
-                    <div>
+                </Button>
+              </Link>
 
-                      <p className="text-base font-bold text-black">
-                        Raw repository context
-                      </p>
+            </div>
 
-                      <p className="mt-1 text-sm text-zinc-500">
-                        Generated context available for AI analysis.
-                      </p>
-
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={copyContext}
-                      className="h-10 border-zinc-200 bg-white px-4 text-sm font-semibold text-black hover:bg-zinc-100"
-                    >
-                      {copied ? (
-                        <>
-                          {icons.check}
-                          <span className="ml-2">
-                            Copied
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          {icons.copy}
-                          <span className="ml-2">
-                            Copy context
-                          </span>
-                        </>
-                      )}
-                    </Button>
-
-                  </div>
-
-                  <pre className="max-h-[600px] overflow-auto bg-zinc-950 p-6 font-mono text-xs leading-6 text-white md:p-8">
-                    {typeof context === "string"
-                      ? context
-                      : JSON.stringify(context, null, 2)}
-                  </pre>
-
-                </Card>
-
-              </section>
-            )}
-          <Link href={"/deploy/configurations"}><Button>Proceed</Button></Link>
           </div>
         )}
-
-        {/* =====================================================
-            EMPTY STATE
-        ===================================================== */}
-
-        
 
       </div>
     </main>
   );
 }
 
-/* =============================================================
-   SECTION HEADING
-============================================================= */
 
 function SectionHeading({ eyebrow, title, number }) {
   return (
@@ -848,40 +881,25 @@ function SectionHeading({ eyebrow, title, number }) {
 
       <div>
 
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
-          {eyebrow}
-        </p>
-
         <h2 className="mt-2 text-3xl font-black tracking-tight text-black md:text-4xl">
           {title}
         </h2>
 
       </div>
 
-      <span className="font-mono text-xs text-zinc-400">
-        ANALYSIS / {number}
-      </span>
-
     </div>
   );
 }
 
-/* =============================================================
-   STAT
-============================================================= */
 
 function Stat({ label, value, icon }) {
   return (
-    <div className="group rounded-xl border border-zinc-200 bg-zinc-50 p-6 transition hover:border-zinc-300 hover:bg-white hover:shadow-md">
+    <div className="group rounded-xl border border-zinc-200 bg-zinc-50 p-6 transition hover:border-zinc-300 hover:shadow-md hover:bg-[#cdedf6]">
 
       <div className="flex items-center justify-between">
 
         <span className="text-black">
           {icon}
-        </span>
-
-        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-          Metric
         </span>
 
       </div>
@@ -898,9 +916,6 @@ function Stat({ label, value, icon }) {
   );
 }
 
-/* =============================================================
-   INFO ITEM
-============================================================= */
 
 function InfoItem({ label, value }) {
   return (
@@ -918,9 +933,6 @@ function InfoItem({ label, value }) {
   );
 }
 
-/* =============================================================
-   INFRASTRUCTURE
-============================================================= */
 
 function InfrastructureCard({ name, detected }) {
   return (
@@ -937,14 +949,6 @@ function InfrastructureCard({ name, detected }) {
         <p className="text-base font-bold text-black">
           {name}
         </p>
-
-        <span
-          className={`h-2.5 w-2.5 rounded-full ${
-            detected
-              ? "bg-emerald-500"
-              : "bg-zinc-300"
-          }`}
-        />
 
       </div>
 

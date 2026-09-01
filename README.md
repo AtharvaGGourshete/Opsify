@@ -68,6 +68,11 @@ AUTH_GITHUB_SECRET=
 AUTH_SECRET=
 ```
 
+## Start Cloudflare tunnel
+```
+cloudflared tunnel --url http://localhost:5000
+```
+
 ## Known Gaps
 
 - No root workspace scripts yet.
@@ -76,3 +81,21 @@ AUTH_SECRET=
 - Frontend backend URL is hardcoded to `http://localhost:5000` in the dashboard.
 - Frontend metadata and README are still mostly default scaffold content.
 - AWS SAM deployment currently only covers a test Lambda, not the full backend API.
+
+## Risky Command (Use only to truncate tables) - Strictly for testing purpose
+```
+TRUNCATE TABLE
+    public.scan_evidence,
+    public.infrastructure_files,
+    public.scan_infrastructure,
+    public.scan_databases,
+    public.package_dependencies,
+    public.scan_packages,
+    public.applications,
+    public.scan_languages,
+    public.scan_files,
+    public.repository_scans,
+    public.repositories
+RESTART IDENTITY
+CASCADE;
+```

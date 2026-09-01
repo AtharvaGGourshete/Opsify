@@ -1,10 +1,10 @@
 import { auth } from "@/auth";
 import SignIn from "@/components/auth/sign-in";
-import { Button } from "@/components/ui/button";
+import SignInToast from "@/components/auth/sign-in-toast";
+import SignOutToast from "@/components/auth/sign-out-toast";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
 import { Cable } from "lucide-react";
+import ProtectedLink from "@/components/auth/protectedLink";
 
 const features = [
   {
@@ -117,7 +117,13 @@ function GitHubLogo({ className = "h-5 w-5" }) {
 
 function CloudIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+    >
       <path d="M7.5 18.5h9a4 4 0 0 0 .48-7.97A5.5 5.5 0 0 0 6.36 9.5 4.5 4.5 0 0 0 7.5 18.5Z" />
     </svg>
   );
@@ -125,7 +131,13 @@ function CloudIcon() {
 
 function ShieldIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+    >
       <path d="M12 3 5 6v5c0 4.5 2.9 8.5 7 10 4.1-1.5 7-5.5 7-10V6l-7-3Z" />
       <path d="m9 12 2 2 4-4" />
     </svg>
@@ -134,7 +146,13 @@ function ShieldIcon() {
 
 function SparkleIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+    >
       <path d="m12 3 1.3 5.7L19 10l-5.7 1.3L12 17l-1.3-5.7L5 10l5.7-1.3L12 3Z" />
       <path d="m19 16 .6 2.4L22 19l-2.4.6L19 22l-.6-2.4L16 19l2.4-.6L19 16Z" />
     </svg>
@@ -143,7 +161,13 @@ function SparkleIcon() {
 
 function RocketIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+    >
       <path d="M14 4c2.5-2.5 5.5-2.5 6-2 .5.5.5 3.5-2 6l-7.5 7.5-4-4L14 4Z" />
       <path d="m8.5 11.5-3 1-2 4 4-2 1-3Z" />
       <path d="m12.5 15.5-1 3-4 2 2-4 3-1Z" />
@@ -154,7 +178,13 @@ function RocketIcon() {
 
 function TerminalIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+    >
       <rect x="3" y="4" width="18" height="16" rx="2" />
       <path d="m7 9 3 3-3 3" />
       <path d="M13 15h4" />
@@ -164,7 +194,13 @@ function TerminalIcon() {
 
 function LayersIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+    >
       <path d="m12 3 9 5-9 5-9-5 9-5Z" />
       <path d="m3 12 9 5 9-5" />
       <path d="m3 16 9 5 9-5" />
@@ -174,7 +210,16 @@ function LayersIcon() {
 
 function ZapIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z" />
     </svg>
   );
@@ -185,13 +230,20 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen">
-
-      <section id="product" data-navbar-theme="teal" className="bg-[#58a4b0] relative overflow-hidden px-6 pb-24 md:pb-36 pt-10">
+      <SignInToast />
+      <SignOutToast />
+      <section
+        id="product"
+        data-navbar-theme="teal"
+        className="relative overflow-hidden bg-[#58a4b0] px-6 pb-24 pt-10 md:pb-36"
+      >
 
         {/* Soft Modern Glow */}
+
         <div className="pointer-events-none absolute left-1/2 top-10 h-[500px] w-[800px] -translate-x-1/2 rounded-full" />
 
         {/* Clean Light Subtle Grid */}
+
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.4]"
           style={{
@@ -204,104 +256,212 @@ export default async function Home() {
         <div className="relative mx-auto max-w-7xl">
 
           {/* Hero Heading */}
+
           <h1 className="mx-auto max-w-6xl text-center text-[3.2rem] font-extrabold leading-[1] tracking-[-0.04em] sm:text-6xl md:text-7xl lg:text-[7rem]">
-            <span className="block text-black">From code.</span>
-            <span className="block text-white">To cloud.</span>
-            <span className="block text-black">Automatically.</span>
+            <span className="block text-black">
+              From code.
+            </span>
+
+            <span className="block text-white">
+              To cloud.
+            </span>
+
+            <span className="block text-black">
+              Automatically.
+            </span>
           </h1>
 
           {/* Description */}
+
           <p className="mx-auto mt-8 max-w-xl text-center text-base font-normal leading-7 text-white md:text-lg md:leading-8">
-            Deploy your GitHub projects straight to production without becoming a DevOps expert.
+            Deploy your GitHub projects straight to production
+            without becoming a DevOps expert.
           </p>
 
-          {/* Call to Actions */}
+          {/* =================================================
+              CALL TO ACTIONS
+          ================================================= */}
+
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/aws-setup">
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="h-12 rounded-xl border-neutral-200 bg-white px-6 text-sm font-semibold text-neutral-700 shadow-sm hover:bg-neutral-50 hover:text-neutral-900 transition-all cursor-pointer"
-              ><Cable />Connect to AWS
-              </Button>
-            </Link>
-            <Link href="/deploy">
-              <Button
-                asChild
-                size="lg"
-                className="h-12 w-60 rounded-xl bg-neutral-900 px-6 text-sm font-bold text-white shadow-lg shadow-neutral-900/10 hover:bg-neutral-800 transition-all"
-              >
-                <a href="#get-started">
-                  <div className="flex items-center gap-2">
-                    Deploy your first app
-                    <ArrowRight />
-                  </div>
-                </a>
-              </Button>
-            </Link>
+
+            <ProtectedLink
+              href="/aws-setup"
+              className="
+                inline-flex
+                h-12
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                border
+                border-neutral-200
+                bg-white
+                px-6
+                text-sm
+                font-semibold
+                text-neutral-700
+                shadow-sm
+                transition-all
+                hover:bg-neutral-50
+                hover:text-neutral-900
+              "
+            >
+              <Cable />
+              Connect to AWS
+            </ProtectedLink>
+
+            <ProtectedLink
+              href="/deploy"
+              className="
+                inline-flex
+                h-12
+                w-60
+                items-center
+                justify-center
+                rounded-xl
+                bg-neutral-900
+                px-6
+                text-sm
+                font-bold
+                text-white
+                shadow-lg
+                shadow-neutral-900/10
+                transition-all
+                hover:bg-neutral-800
+              "
+            >
+              <span className="flex items-center gap-2">
+                Deploy your first app
+                <ArrowRight />
+              </span>
+            </ProtectedLink>
+
           </div>
 
+          {/* =================================================
+              PRODUCT PREVIEW
+          ================================================= */}
+
           <div className="relative mx-auto mt-20 max-w-5xl">
+
             <Card className="relative overflow-hidden rounded-2xl border-neutral-200/80 bg-white shadow-xl shadow-neutral-200/50">
 
               <div className="grid md:grid-cols-[1.2fr_1fr]">
 
                 {/* Terminal Side */}
-                <CardContent className="border-l rounded-md ml-3 border-neutral-100 p-6 md:border-b-0 md:border-r md:p-8 bg-neutral-900 text-neutral-100 ">
+
+                <CardContent className="ml-3 rounded-md border-l border-neutral-100 bg-neutral-900 p-6 text-neutral-100 md:border-b-0 md:border-r md:p-8">
+
                   <div className="mb-6 flex items-center gap-3">
+
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-800 text-white">
                       <GitHubLogo />
                     </div>
+
                     <div>
-                      <p className="text-xs font-bold text-white">your-repository</p>
-                      <p className="text-[10px] text-neutral-400 font-mono">github.com/org/project</p>
+                      <p className="text-xs font-bold text-white">
+                        your-repository
+                      </p>
+
+                      <p className="font-mono text-[10px] text-neutral-400">
+                        github.com/org/project
+                      </p>
                     </div>
+
                   </div>
 
                   <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-5 font-mono text-xs shadow-inner">
-                    <div className="mb-4 text-neutral-500">$ opsify deploy --production</div>
+
+                    <div className="mb-4 text-neutral-500">
+                      $ opsify deploy --production
+                    </div>
+
                     <div className="space-y-3">
+
                       <div className="flex items-center gap-3">
-                        <span className="text-emerald-400 font-bold">✓</span>
-                        <span className="text-neutral-300">Repository structure analyzed</span>
+                        <span className="font-bold text-emerald-400">
+                          ✓
+                        </span>
+
+                        <span className="text-neutral-300">
+                          Repository structure analyzed
+                        </span>
                       </div>
+
                       <div className="flex items-center gap-3">
-                        <span className="text-emerald-400 font-bold">✓</span>
-                        <span className="text-neutral-300">CloudFormation blueprint generated</span>
+                        <span className="font-bold text-emerald-400">
+                          ✓
+                        </span>
+
+                        <span className="text-neutral-300">
+                          CloudFormation blueprint generated
+                        </span>
                       </div>
+
                       <div className="flex items-center gap-3">
-                        <span className="text-emerald-400 font-bold">✓</span>
-                        <span className="text-neutral-300">AWS resources securely provisioned</span>
+                        <span className="font-bold text-emerald-400">
+                          ✓
+                        </span>
+
+                        <span className="text-neutral-300">
+                          AWS resources securely provisioned
+                        </span>
                       </div>
+
                       <div className="flex items-center gap-3">
-                        <span className="text-emerald-400 font-bold">✓</span>
-                        <span className="text-neutral-300">Production pipeline built & active</span>
+                        <span className="font-bold text-emerald-400">
+                          ✓
+                        </span>
+
+                        <span className="text-neutral-300">
+                          Production pipeline built & active
+                        </span>
                       </div>
+
                       <div className="mt-5 border-t border-neutral-800/80 pt-4">
-                        <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-sans">Live Endpoint</p>
-                        <p className="mt-1.5 font-mono text-xs text-emerald-400 font-semibold underline underline-offset-4">
+
+                        <p className="font-sans text-[10px] uppercase tracking-widest text-neutral-500">
+                          Live Endpoint
+                        </p>
+
+                        <p className="mt-1.5 font-mono text-xs font-semibold text-emerald-400 underline underline-offset-4">
                           https://app.opsify.dev
                         </p>
+
                       </div>
+
                     </div>
+
                   </div>
+
                 </CardContent>
 
                 {/* Architecture Overview Side */}
-                <CardContent className="p-6 md:p-8 bg-white flex flex-col justify-between">
+
+                <CardContent className="flex flex-col justify-between bg-white p-6 md:p-8">
+
                   <div>
+
                     <div className="mb-6 flex items-center justify-between">
+
                       <div>
-                        <h3 className="mt-1 text-lg font-bold text-neutral-900">Stack Ready</h3>
+                        <h3 className="mt-1 text-lg font-bold text-neutral-900">
+                          Stack Ready
+                        </h3>
                       </div>
+
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">
+
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+
                         ACTIVE
+
                       </span>
+
                     </div>
 
                     <div className="space-y-2.5">
+
                       {[
                         ["Compute Engine", "AWS Lambda"],
                         ["API Gateway", "REST / HTTP API"],
@@ -309,135 +469,314 @@ export default async function Home() {
                         ["Auth Standard", "OIDC Secure"],
                         ["Template Spec", "CloudFormation"],
                       ].map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between rounded-xl border border-neutral-100 bg-neutral-50/60 px-4 py-3">
-                          <span className="text-xs font-medium text-neutral-500">{key}</span>
-                          <span className="text-xs font-bold text-neutral-900">{value}</span>
+
+                        <div
+                          key={key}
+                          className="flex items-center justify-between rounded-xl border border-neutral-100 bg-neutral-50/60 px-4 py-3"
+                        >
+                          <span className="text-xs font-medium text-neutral-500">
+                            {key}
+                          </span>
+
+                          <span className="text-xs font-bold text-neutral-900">
+                            {value}
+                          </span>
                         </div>
+
                       ))}
+
                     </div>
+
                   </div>
+
                 </CardContent>
 
               </div>
+
             </Card>
+
           </div>
 
         </div>
+
       </section>
 
-      <section id="technologies" data-navbar-theme="white" className="border-y border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-12 gap-y-6 px-6 py-6 text-xs font-bold text-black tracking-wider uppercase">
-          <span className="flex items-center gap-2"><GitHubLogo className="h-4 w-4" /> GitHub</span>
-          <span className="flex items-center gap-2"><CloudIcon /> AWS Cloud</span>
-          <span className="flex items-center gap-2"><TerminalIcon /> Actions OIDC</span>
-          <span className="flex items-center gap-2"><ShieldIcon /> Secure IAM</span>
-          <span className="flex items-center gap-2"><LayersIcon /> CloudFormation</span>
+      {/* =====================================================
+          TECHNOLOGIES
+      ===================================================== */}
+
+      <section
+        id="technologies"
+        data-navbar-theme="white"
+        className="border-y border-neutral-200 bg-white"
+      >
+
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-12 gap-y-6 px-6 py-6 text-xs font-bold uppercase tracking-wider text-black">
+
+          <span className="flex items-center gap-2">
+            <GitHubLogo className="h-4 w-4" />
+            GitHub
+          </span>
+
+          <span className="flex items-center gap-2">
+            <CloudIcon />
+            AWS Cloud
+          </span>
+
+          <span className="flex items-center gap-2">
+            <TerminalIcon />
+            Actions OIDC
+          </span>
+
+          <span className="flex items-center gap-2">
+            <ShieldIcon />
+            Secure IAM
+          </span>
+
+          <span className="flex items-center gap-2">
+            <LayersIcon />
+            CloudFormation
+          </span>
+
         </div>
+
       </section>
 
-      <section id="how-it-works" data-navbar-theme="light" className="bg-[#cdedf6] px-6 py-28 md:py-36">
+      {/* =====================================================
+          HOW IT WORKS
+      ===================================================== */}
+
+      <section
+        id="how-it-works"
+        data-navbar-theme="light"
+        className="bg-[#cdedf6] px-6 py-28 md:py-36"
+      >
+
         <div className="mx-auto max-w-7xl">
+
           <div className="max-w-3xl">
+
             <h2 className="text-3xl font-extrabold tracking-tight text-black md:text-5xl">
               Production ready in three clear steps.
             </h2>
+
             <p className="mt-4 max-w-xl text-base font-normal leading-7 text-neutral-600">
-              No manual infrastructure configuration needed. Opsify smoothly automates the pipeline from commit to deployment.
+              No manual infrastructure configuration needed.
+              Opsify smoothly automates the pipeline from commit
+              to deployment.
             </p>
+
           </div>
 
           <div className="mt-16 grid gap-6 md:grid-cols-3">
+
             {steps.map((step, index) => (
-              <Card key={step.number} className="group relative overflow-hidden border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:bg-[#58a4b0]/30 hover:shadow-md">
+
+              <Card
+                key={step.number}
+                className="group relative overflow-hidden border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:bg-[#58a4b0]/30 hover:shadow-md"
+              >
+
                 <CardContent className="p-8">
+
                   <div className="flex items-start justify-between">
-                    <span className="font-mono text-sm font-bold text-black">{step.number}</span>
-                    <div className="text-black group-hover:text-neutral-900 transition-colors">
+
+                    <span className="font-mono text-sm font-bold text-black">
+                      {step.number}
+                    </span>
+
+                    <div className="text-black transition-colors group-hover:text-neutral-900">
+
                       {index === 0 && <GitHubLogo />}
+
                       {index === 1 && <LayersIcon />}
+
                       {index === 2 && <RocketIcon />}
+
                     </div>
+
                   </div>
+
                   <div className="mt-16">
-                    <h3 className="text-xl font-bold text-neutral-900 tracking-tight">{step.title}</h3>
-                    <p className="mt-3 text-sm font-normal leading-6 text-neutral-600">{step.description}</p>
+
+                    <h3 className="text-xl font-bold tracking-tight text-neutral-900">
+                      {step.title}
+                    </h3>
+
+                    <p className="mt-3 text-sm font-normal leading-6 text-neutral-600">
+                      {step.description}
+                    </p>
+
                   </div>
+
                 </CardContent>
+
               </Card>
+
             ))}
+
           </div>
+
         </div>
+
       </section>
 
-      <section id="features" data-navbar-theme="teal" className="border-y border-neutral-200 bg-[#58a4b0] px-6 py-28 md:py-36">
+      {/* =====================================================
+          FEATURES
+      ===================================================== */}
+
+      <section
+        id="features"
+        data-navbar-theme="teal"
+        className="border-y border-neutral-200 bg-[#58a4b0] px-6 py-28 md:py-36"
+      >
+
         <div className="mx-auto max-w-7xl">
+
           <div className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
+
             <div className="max-w-2xl">
+
               <h2 className="text-3xl font-extrabold tracking-tight text-neutral-900 md:text-5xl">
-                Advanced DevOps,<br />
-                <span className="text-white">without the configuration overhead.</span>
+
+                Advanced DevOps,
+                <br />
+
+                <span className="text-white">
+                  without the configuration overhead.
+                </span>
+
               </h2>
+
             </div>
+
             <p className="max-w-md text-base font-normal leading-7 text-white">
-              Opsify handles standard maintenance automation while maintaining complete visibility and control over your configuration files.
+              Opsify handles standard maintenance automation
+              while maintaining complete visibility and control
+              over your configuration files.
             </p>
+
           </div>
 
           <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+
             {features.map((feature, index) => (
-              <Card key={feature.title} className="group border-neutral-200 bg-[#fafafa]/50 shadow-none transition-all duration-300 hover:bg-[#cdedf6] hover:shadow-sm">
+
+              <Card
+                key={feature.title}
+                className="group border-neutral-200 bg-[#fafafa]/50 shadow-none transition-all duration-300 hover:bg-[#cdedf6] hover:shadow-sm"
+              >
+
                 <CardContent className="p-8">
+
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-sm font-bold text-black">{feature.number}</span>
-                    <div className="flex h-10 w-10 items-center justify-center text-neutral-600 group-hover:text-neutral-900 group-hover:border-neutral-300 transition">
+
+                    <span className="font-mono text-sm font-bold text-black">
+                      {feature.number}
+                    </span>
+
+                    <div className="flex h-10 w-10 items-center justify-center text-neutral-600 transition group-hover:text-neutral-900">
+
                       {index === 0 && <SparkleIcon />}
+
                       {index === 1 && <ShieldIcon />}
+
                       {index === 2 && <RocketIcon />}
+
                       {index === 3 && <TerminalIcon />}
+
                       {index === 4 && <CloudIcon />}
+
                       {index === 5 && <SparkleIcon />}
+
                     </div>
+
                   </div>
-                  <h3 className="mt-10 text-lg font-bold text-neutral-900 tracking-tight">{feature.title}</h3>
-                  <p className="mt-3 text-sm font-normal leading-6 text-neutral-600">{feature.description}</p>
+
+                  <h3 className="mt-10 text-lg font-bold tracking-tight text-neutral-900">
+                    {feature.title}
+                  </h3>
+
+                  <p className="mt-3 text-sm font-normal leading-6 text-neutral-600">
+                    {feature.description}
+                  </p>
+
                 </CardContent>
+
               </Card>
+
             ))}
+
           </div>
+
         </div>
+
       </section>
 
-      <section id="get-started" data-navbar-theme="light" className="px-6 py-28 md:py-36 bg-[#cdedf6]">
+      {/* =====================================================
+          GET STARTED
+      ===================================================== */}
+
+      <section
+        id="get-started"
+        data-navbar-theme="light"
+        className="bg-[#cdedf6] px-6 py-28 md:py-36"
+      >
+
         <Card className="relative mx-auto max-w-5xl overflow-hidden border-neutral-200 bg-[#0d1821] text-white shadow-2xl">
 
           <CardContent className="relative px-6 py-20 text-center md:px-16 md:py-28">
 
             <h2 className="mx-auto mt-6 max-w-3xl text-3xl font-extrabold leading-[1.1] tracking-tight md:text-5xl">
-              Stop configuring manual infrastructure.<br />
-              <span className="text-white">Start shipping production apps.</span>
+              Stop configuring manual infrastructure.
+              <br />
+
+              <span className="text-white">
+                Start shipping production apps.
+              </span>
             </h2>
 
             <p className="mx-auto mt-6 max-w-lg text-sm font-normal leading-6 text-neutral-400 md:text-base">
-              Connect your repository today and let Opsify automate your delivery workflows seamlessly.
+              Connect your repository today and let Opsify
+              automate your delivery workflows seamlessly.
             </p>
 
-            <Button
-              asChild
-              size="lg"
-              className="mt-8 h-12 rounded-xl bg-white px-8 font-bold text-neutral-900 hover:bg-neutral-100 shadow transition-all cursor-pointer"
+            {/* Protected CTA — no nested Button/Link */}
+
+            <ProtectedLink
+              href="/deploy"
+              className="
+                mt-8
+                inline-flex
+                h-12
+                items-center
+                justify-center
+                rounded-xl
+                bg-white
+                px-8
+                font-bold
+                text-neutral-900
+                shadow
+                transition-all
+                hover:bg-neutral-100
+              "
             >
-              <Link href="/deploy">
-              <div className="flex items-center">
+              <span className="flex items-center">
                 Get started with Opsify
-                <span className="ml-2"><ArrowRight /></span>
-              </div>
-              </Link>
-            </Button>
+
+                <span className="ml-2">
+                  <ArrowRight />
+                </span>
+              </span>
+            </ProtectedLink>
+
           </CardContent>
+
         </Card>
+
       </section>
 
-      
+
     </main>
   );
 }
