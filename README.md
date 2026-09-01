@@ -4,16 +4,49 @@ Opsify is an early full-stack app scaffold for repository analysis.
 
 ## Current Setup
 
-- `frontend/`: Next.js 16 app using React 19, Tailwind CSS 4, ESLint, and NextAuth.
-- `backend/`: Express 5 API using CORS, dotenv, simple-git, ignore, and Repomix.
-- Backend repository analysis endpoint:
-  - `GET /api/health`
-  - `POST /api/repositories/analyze`
-- GitHub auth is wired in the frontend through NextAuth.
-- Frontend routes currently include `/` and `/dashboard`.
-- AWS files exist under `backend/deployment/aws/`:
-  - `bootstrap.yml` creates a GitHub Actions OIDC role.
-  - `template.yml` defines a minimal AWS SAM Lambda test endpoint at `GET /test`.
+* `frontend/`: Next.js 16 app using React 19, Tailwind CSS 4, ESLint, and NextAuth.
+* `backend/`: Express 5 API using CORS, dotenv, simple-git, ignore, and Repomix.
+* Backend repository analysis endpoints:
+
+  * `GET /api/health`
+  * `POST /api/repositories/analyze`
+* GitHub auth is wired in the frontend through NextAuth.
+* GitHub user information is persisted through the backend authentication flow.
+* Frontend routes currently include `/` and `/dashboard`.
+* AWS connection flow is implemented between the frontend and backend.
+* AWS files exist under `backend/deployment/aws/`:
+
+  * `bootstrap.yml` creates a GitHub Actions OIDC deployment role.
+  * `template.yml` defines the AWS SAM application, including the minimal Lambda test endpoint at `GET /test`.
+* AWS connection management is implemented through:
+
+  * `POST /api/aws/connections` to create or reuse an AWS connection.
+  * `POST /api/aws/connections/callback` to register the AWS account and IAM role after CloudFormation completes.
+* AWS connections are stored in the PostgreSQL `aws_connections` table.
+* AWS connections are associated with the authenticated GitHub user through `github_user_id`.
+* Existing AWS connections are reused instead of creating duplicate connections.
+* Pending AWS bootstrap connections are also reused instead of generating a new connection ID.
+* The frontend AWS setup flow obtains the authenticated user's GitHub ID from the NextAuth session.
+* GitHub repository configuration for the AWS deployment currently uses environment variables:
+
+  * `NEXT_PUBLIC_GITHUB_OWNER`
+  * `NEXT_PUBLIC_GITHUB_OWNER_ID`
+  * `NEXT_PUBLIC_GITHUB_REPOSITORY`
+  * `NEXT_PUBLIC_GITHUB_REPOSITORY_ID`
+  * `NEXT_PUBLIC_GITHUB_BRANCH`
+* Currently, `NEXT_PUBLIC_GITHUB_OWNER` and `NEXT_PUBLIC_GITHUB_REPOSITORY` are passed to the AWS bootstrap process, while the authenticated user's `github_user_id` comes from the active GitHub session. The `OWNER_ID` and `REPOSITORY_ID` variables are not currently used by the provided AWS setup page.
+* The AWS setup page generates a CloudFormation launch URL containing the connection ID, GitHub user ID, repository owner, repository name, branch, and Opsify callback URL.
+* After the CloudFormation bootstrap creates the IAM role, AWS sends the connection information back to Opsify, including:
+
+  * AWS account ID
+  * AWS region
+  * IAM role name
+  * IAM role ARN
+  * connection status
+  * bootstrap stack name
+* Opsify then stores the resulting AWS role and account information against the user's AWS connection.
+* The frontend AWS setup page displays the configured GitHub repository, branch, connection ID, and bootstrap stack status, and provides the CloudFormation launch action.
+
 
 ## Backend
 
@@ -72,15 +105,15 @@ AUTH_SECRET=
 ```
 cloudflared tunnel --url http://localhost:5000
 ```
+Copy the latest cloudflare url and paste it into:
 
-## Known Gaps
+```
+backend/.env:
+OPSIFY_API_URL=https://[YOUR_LATEST_GENERATED_CLOUDFLARE_URL].trycloudflare.com
 
-- No root workspace scripts yet.
-- No database or persistence layer.
-- No automated tests configured.
-- Frontend backend URL is hardcoded to `http://localhost:5000` in the dashboard.
-- Frontend metadata and README are still mostly default scaffold content.
-- AWS SAM deployment currently only covers a test Lambda, not the full backend API.
+frontend/.env:
+NEXT_PUBLIC_API_URL=https://[YOUR_LATEST_GENERATED_CLOUDFLARE_URL].trycloudflare.com
+```
 
 ## Risky Command (Use only to truncate tables) - Strictly for testing purpose
 ```
