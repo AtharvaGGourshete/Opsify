@@ -25,12 +25,54 @@ const icons = {
 export default function DeployPage() {
   const { data: session } = useSession();
 
+  const [repositories, setRepositories] = useState([]);
+  const [selectedRepository, setSelectedRepository] = useState(null);
   const [url, setUrl] = useState("");
   const [context, setContext] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [repositoriesLoading, setRepositoriesLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    async function loadRepositories() {
+      if (!session?.user?.githubId) {
+        setRepositoriesLoading(false);
+        return;
+      }
+
+      try {
+        setRepositoriesLoading(true);
+        setError("");
+
+        const response = await fetch("/api/github/repositories", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Failed to load GitHub repositories."
+          );
+        }
+
+        setRepositories(data.repositories || []);
+      } catch (error) {
+        console.error("Failed to load GitHub repositories:", error);
+
+        setError(
+          error.message || "Failed to load GitHub repositories."
+        );
+      } finally {
+        setRepositoriesLoading(false);
+      }
+    }
+
+    loadRepositories();
+  }, [session]);
 
   useEffect(() => {
     async function loadLatestAnalysis() {
@@ -77,9 +119,47 @@ export default function DeployPage() {
   }, [session]);
 
   async function analyzeRepository() {
-    if (!url.trim()) {
-      setError("Enter a GitHub repository URL to continue.");
-      return;
+    async function analyzeRepository() {
+      if (!selectedRepository) {
+        setError("Select a GitHub repository to continue.");
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+      setProfile(null);
+      setContext(null);
+
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/repositories/analyze",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              url: selectedRepository.html_url,
+              github_user_id: session?.user?.githubId,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Repository analysis failed."
+          );
+        }
+
+        setProfile(data.profile);
+        setContext(data.context);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
     }
 
     setLoading(true);
@@ -122,6 +202,7 @@ export default function DeployPage() {
   function clearAnalysis() {
     setProfile(null);
     setContext(null);
+    setSelectedRepository(null);
     setUrl("");
     setError("");
     setCopied(false);
@@ -183,32 +264,119 @@ export default function DeployPage() {
             <div className="mb-7 flex items-center gap-4">
               <div>
                 <h2 className="text-xl font-bold tracking-tight text-black">Analyze repository</h2>
-                <p className="mt-1 text-sm text-zinc-500">Paste a public GitHub repository URL</p>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Select a GitHub repository you have access to
+                </p>
               </div>
             </div>
 
             <div className="flex flex-col gap-3 md:flex-row">
-              <div className="relative flex-1">
-                <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
-                  {icons.search}
-                </div>
-                <input type="url" value={url} onChange={(e) => { setUrl(e.target.value); setError(""); }} onKeyDown={(e) => { if (e.key === "Enter") analyzeRepository(); }} placeholder="https://github.com/username/repository" className="h-14 w-full rounded-xl border border-zinc-200 bg-zinc-50 pl-12 pr-5 text-base font-medium text-black outline-none placeholder:text-zinc-400 transition focus:border-black focus:bg-white focus:ring-2 focus:ring-black/5" />
-              </div>
+              <div className="flex flex-col gap-3 md:flex-row">
+                <div className="relative flex-1">
+                  {repositoriesLoading ? (
+                    <div className="flex h-14 w-full items-center rounded-xl border border-zinc-200 bg-zinc-50 px-5 text-sm font-medium text-zinc-500">
+                      Loading your GitHub repositories...
+                    </div>
+                  ) : repositories.length === 0 ? (
+                    <div className="flex h-14 w-full items-center rounded-xl border border-red-200 bg-red-50 px-5 text-sm font-medium text-red-700">
+                      No GitHub repositories available.
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedRepository?.id || ""}
+                      onChange={(e) => {
+                        const repository = repositories.find(
+                          (item) => String(item.id) === e.target.value
+                        );
 
-              <Button onClick={analyzeRepository} disabled={loading} className="h-14 rounded-xl bg-black px-7 text-base font-bold text-white hover:bg-zinc-800 cursor-pointer">
-                {loading ? (
-                  <>
-                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    Analyze repository
-                    <span className="ml-2">{icons.arrow}</span>
-                  </>
-                )}
-              </Button>
+                        setSelectedRepository(repository || null);
+                        setUrl(repository?.html_url || "");
+                        setError("");
+
+                        if (repository) {
+                          localStorage.setItem(
+                            "opsify_selected_repository",
+                            JSON.stringify({
+                              id: repository.id,
+                              name: repository.name,
+                              full_name: repository.full_name,
+                              html_url: repository.html_url,
+                              default_branch: repository.default_branch || "main",
+                              private: repository.private,
+                              owner: repository.owner,
+                            })
+                          );
+                        } else {
+                          localStorage.removeItem("opsify_selected_repository");
+                        }
+                      }}
+                      className="h-14 w-full appearance-none rounded-xl border border-zinc-200 bg-zinc-50 px-5 pr-10 text-base font-medium text-black outline-none transition focus:border-black focus:bg-white focus:ring-2 focus:ring-black/5"
+                    >
+                      <option value="">Select a repository</option>
+
+                      {repositories
+                        .filter((repository) => !repository.archived)
+                        .map((repository) => (
+                          <option key={repository.id} value={repository.id}>
+                            {repository.full_name}
+                            {repository.private ? " — Private" : " — Public"}
+                          </option>
+                        ))}
+                    </select>
+                  )}
+                </div>
+
+                <Button
+                  onClick={analyzeRepository}
+                  disabled={loading || repositoriesLoading || !selectedRepository}
+                  className="h-14 rounded-xl bg-black px-7 text-base font-bold text-white hover:bg-zinc-800 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      Analyze repository
+                      <span className="ml-2">{icons.arrow}</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
+
+            {selectedRepository && (
+              <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+                      Selected repository
+                    </p>
+
+                    <p className="mt-1 truncate font-mono text-sm font-bold text-black">
+                      {selectedRepository.full_name}
+                    </p>
+
+                    {selectedRepository.description && (
+                      <p className="mt-1 truncate text-xs text-zinc-500">
+                        {selectedRepository.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex shrink-0 gap-2">
+                    <span className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600">
+                      {selectedRepository.private ? "Private" : "Public"}
+                    </span>
+
+                    <span className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600">
+                      {selectedRepository.default_branch || "main"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
@@ -401,7 +569,7 @@ export default function DeployPage() {
               <Button type="button" onClick={clearAnalysis} variant="outline" className="h-12 rounded-xl px-7 font-semibold text-black cursor-pointer hover:bg-zinc-100">
                 Clear Analysis
               </Button>
-              <Link href="/deploy/configurations">
+              <Link href="/aws-setup">
                 <Button type="button" className="h-12 w-full rounded-xl bg-black px-8 text-base font-bold text-white hover:bg-zinc-800 sm:w-auto cursor-pointer">
                   Proceed
                   <span className="ml-2">{icons.arrow}</span>

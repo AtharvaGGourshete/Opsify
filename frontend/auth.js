@@ -10,20 +10,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 
   callbacks: {
-  async jwt({ token, account }) {
-    if (account?.provider === "github") {
-      token.githubId = account.providerAccountId;
-    }
+    async jwt({ token, account }) {
+      if (account?.provider === "github") {
+        token.githubId = account.providerAccountId;
+        token.githubAccessToken = account.access_token;
+      }
 
-    return token;
+      return token;
+    },
+
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.githubId = token.githubId;
+      }
+
+      return session;
+    },
   },
-
-  async session({ session, token }) {
-    if (session.user) {
-      session.user.githubId = token.githubId;
-    }
-
-    return session;
-  },
-}
 });

@@ -11,7 +11,7 @@ export default function SignOut() {
           callbackUrl: "/?signedOut=true",
         })
       }
-      className="flex items-center gap-1 rounded-md text-black cursor-pointer"
+      className="flex items-center gap-1 rounded-md text-black cursor-pointer w-full"
     >
       <LogOut size={15} />
       Logout

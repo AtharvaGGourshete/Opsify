@@ -234,7 +234,7 @@ export default function Navbar() {
                       font-medium
                       text-zinc-700
                       transition-colors
-                      hover:bg-red-500/10
+                      hover:bg-red-500
                       hover:text-red-600
                     "
                     onClick={() =>

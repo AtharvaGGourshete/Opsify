@@ -24,20 +24,17 @@ function buildLaunchUrl({
   callbackUrl,
 }) {
   const params = new URLSearchParams({
-    templateURL: templateUrl,
-    stackName,
-
-    param_ConnectionId: connectionId,
-    param_github_user_id: String(github_user_id),
-
-    param_github_owner: github_owner,
-    param_github_repository: github_repository,
-    param_github_branch: github_branch || "main",
-
-    param_OpsifyCallbackUrl: callbackUrl,
+    "param_ConnectionId": connectionId,
+    "param_GitHubBranch": github_branch,
+    "param_GitHubOwner": github_owner,
+    "param_GitHubRepository": github_repository,
+    "param_GitHubUserId": github_user_id,
+    "param_OpsifyCallbackUrl": callbackUrl,
   });
 
-  return `${AWS_CONSOLE_URL}?${params.toString()}`;
+  return `https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=${encodeURIComponent(
+    templateUrl
+  )}&stackName=${encodeURIComponent(stackName)}&${params.toString()}`;
 }
 
 export const createAWSConnection = async (req, res) => {

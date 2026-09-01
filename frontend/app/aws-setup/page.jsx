@@ -133,7 +133,7 @@ export default function AWSSetupPage() {
   const [launchUrl, setLaunchUrl] = useState("");
   const [connectionId, setConnectionId] = useState("");
   const [stackName, setStackName] = useState("");
-
+  const [selectedRepository, setSelectedRepository] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -145,6 +145,8 @@ export default function AWSSetupPage() {
 
       const github_user_id = session?.user?.githubId;
 
+
+
       if (!github_user_id) {
         setError("GitHub user ID is missing from the active session. Sign out and sign in again with GitHub.");
 
@@ -152,35 +154,52 @@ export default function AWSSetupPage() {
         return;
       }
 
+      const storedRepository =
+        localStorage.getItem("opsify_selected_repository");
+
+      if (!storedRepository) {
+        setError(
+          "No GitHub repository has been selected. Go to Deploy and select a repository first."
+        );
+        setLoading(false);
+        return;
+      }
+
+      let repository;
+
+      try {
+        repository = JSON.parse(storedRepository);
+      } catch {
+        localStorage.removeItem("opsify_selected_repository");
+
+        setError(
+          "The selected GitHub repository could not be loaded. Please select it again."
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (
+        !repository?.owner?.login ||
+        !repository?.name
+      ) {
+        setError(
+          "The selected GitHub repository information is incomplete. Please select the repository again."
+        );
+        setLoading(false);
+        return;
+      }
+
+      setSelectedRepository(repository);
+
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-      if (!apiUrl) {
-        setError("NEXT_PUBLIC_API_URL is not configured.");
-
-        setLoading(false);
-        return;
-      }
-
-      if (!githubConfig.owner) {
-        setError("NEXT_PUBLIC_GITHUB_OWNER is not configured.");
-
-        setLoading(false);
-        return;
-      }
-
-      if (!githubConfig.repository) {
-        setError("NEXT_PUBLIC_GITHUB_REPOSITORY is not configured.");
-
-        setLoading(false);
-        return;
-      }
 
       try {
         setLoading(true);
         setError("");
         console.log("Checking existing AWS connection...");
 
-        const profileResponse = await fetch(`${apiUrl.replace(/\/$/,"")}/api/auth/users/${github_user_id}`,
+        const profileResponse = await fetch(`${apiUrl.replace(/\/$/, "")}/api/auth/users/${github_user_id}`,
           {
             cache: "no-store",
           }
@@ -203,7 +222,18 @@ export default function AWSSetupPage() {
         const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/aws/connections`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ github_user_id, github_owner: githubConfig.owner, github_repository: githubConfig.repository, github_branch: githubConfig.branch }),
+          body: JSON.stringify({
+            github_user_id: github_user_id,
+
+            github_owner:
+              repository.owner.login,
+
+            github_repository:
+              repository.name,
+
+            github_branch:
+              repository.default_branch || "main",
+          }),
         });
 
         const data = await response.json();
@@ -392,12 +422,16 @@ export default function AWSSetupPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs text-black/40">Repository</p>
-                      <p className="mt-1 truncate font-mono text-sm font-bold text-black">{githubConfig.owner || "Not configured"}/{githubConfig.repository || "Not configured"}</p>
+                      <p className="mt-1 truncate font-mono text-sm font-bold text-black">
+                        {selectedRepository
+                          ? selectedRepository.full_name
+                          : "Not configured"}
+                      </p>
                     </div>
                   </div>
                   <div className="shrink-0 rounded-xl border border-white/70 bg-white/60 px-4 py-3 shadow-sm backdrop-blur-xl">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-black/40">Branch</p>
-                    <p className="mt-1 font-mono text-xs font-semibold text-black/70">{githubConfig.branch}</p>
+                    <p className="mt-1 font-mono text-xs font-semibold text-black/70">{selectedRepository?.default_branch || "main"}</p>
                   </div>
                 </div>
 
@@ -453,13 +487,28 @@ export default function AWSSetupPage() {
             <div className="mt-8">
 
               {launchUrl ? (
-                <a href={launchUrl} target="_blank" rel="noopener noreferrer" className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-black px-6 py-4 text-sm font-bold text-white shadow-lg shadow-black/10 transition-all duration-300 hover:bg-black/85 hover:shadow-xl">
+                <a
+                  href={launchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-black px-6 py-4 text-sm font-bold text-white shadow-lg shadow-black/10 transition-all duration-300 hover:bg-black/85 hover:shadow-xl"
+                >
                   <span>Launch AWS CloudFormation</span>
                   <ArrowIcon />
                 </a>
               ) : (
-                <div className="flex w-full items-center justify-center rounded-2xl border border-white/60 bg-white/50 px-6 py-4 text-sm font-bold text-black/60 shadow-sm backdrop-blur-xl">
-                  AWS account already connected
+                <div className="space-y-3">
+                  <div className="flex w-full items-center justify-center rounded-2xl border border-white/60 bg-white/50 px-6 py-4 text-sm font-bold text-black/60 shadow-sm backdrop-blur-xl">
+                    AWS account already connected
+                  </div>
+
+                  <a
+                    href="/deploy/configurations"
+                    className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-black px-6 py-4 text-sm font-bold text-white shadow-lg shadow-black/10 transition-all duration-300 hover:bg-black/85 hover:shadow-xl"
+                  >
+                    <span>Go to deployment configuration</span>
+                    <ArrowIcon />
+                  </a>
                 </div>
               )}
               <div className="mt-4 flex items-start justify-center gap-2 px-4">
