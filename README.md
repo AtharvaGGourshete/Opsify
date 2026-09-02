@@ -1,6 +1,6 @@
 # Opsify
 
-Opsify is an early full-stack app scaffold for repository analysis.
+Opsify is an Fully Automated Deployment Pipeline that reduces the hassle of configuring your projects. 
 
 ## Current Setup
 
@@ -27,14 +27,6 @@ Opsify is an early full-stack app scaffold for repository analysis.
 * Existing AWS connections are reused instead of creating duplicate connections.
 * Pending AWS bootstrap connections are also reused instead of generating a new connection ID.
 * The frontend AWS setup flow obtains the authenticated user's GitHub ID from the NextAuth session.
-* GitHub repository configuration for the AWS deployment currently uses environment variables:
-
-  * `NEXT_PUBLIC_GITHUB_OWNER`
-  * `NEXT_PUBLIC_GITHUB_OWNER_ID`
-  * `NEXT_PUBLIC_GITHUB_REPOSITORY`
-  * `NEXT_PUBLIC_GITHUB_REPOSITORY_ID`
-  * `NEXT_PUBLIC_GITHUB_BRANCH`
-* Currently, `NEXT_PUBLIC_GITHUB_OWNER` and `NEXT_PUBLIC_GITHUB_REPOSITORY` are passed to the AWS bootstrap process, while the authenticated user's `github_user_id` comes from the active GitHub session. The `OWNER_ID` and `REPOSITORY_ID` variables are not currently used by the provided AWS setup page.
 * The AWS setup page generates a CloudFormation launch URL containing the connection ID, GitHub user ID, repository owner, repository name, branch, and Opsify callback URL.
 * After the CloudFormation bootstrap creates the IAM role, AWS sends the connection information back to Opsify, including:
 
@@ -58,24 +50,13 @@ npm run dev
 
 The backend runs on `http://localhost:5000` by default.
 
-`POST /api/repositories/analyze` expects:
+Required auth environment variables:
 
-```json
-{
-  "url": "https://github.com/owner/repo"
-}
-```
-
-It clones the GitHub repository, scans files, detects languages/packages/frameworks/apps/databases/infrastructure, generates Repomix context, then returns a repository profile.
-
-## AWS Deployment
-
-`backend/deployment/aws/template.yml` is currently a minimal SAM template, separate from the Express API. It deploys `backend/deployment/aws/src/app.js` as a Node.js 22 Lambda that returns:
-
-```json
-{
-  "message": "Opsify AWS SAM deployment works!"
-}
+```bash
+PORT='YOUR_PORT'
+DATABASE_URL='YOUR_SUPABASE_DIRECT_CONNECTION_URL'
+OPSIFY_API_TOKEN='YOUR_OPSIFY_API_TOKEN' #To be created on Github
+AWS_BOOTSTRAP_URL='YOUR_AWS_BOOTSTRAP_URL' #The bootstrap.yml file location on s3
 ```
 
 ## Frontend
@@ -91,14 +72,29 @@ The frontend runs on `http://localhost:3000` by default.
 Current frontend routes:
 
 - `/`: GitHub sign-in and signed-in user summary.
-- `/dashboard`: repository analysis dashboard. It accepts a GitHub repository URL, calls `http://localhost:5000/api/repositories/analyze`, and displays repository overview stats, detected applications, languages, dependencies, infrastructure/CI detection, evidence, and raw Repomix context with copy support.
+
+- `/deploy`: Repository analysis dashboard. It gets all the public repositories from users github account, calls `http://localhost:5000/api/repositories/analyze`, and displays repository overview stats, detected applications, languages, dependencies, infrastructure/CI detection, evidence, and raw Repomix context with copy support.
+
+- `/aws-setup`: AWS Account Connection architecture lies here. The user connects to his/her AWS Account using Github's Open ID Connect that creates a Deployment role (IAM). 
+
+- `/deploy/configurations`: Deployment Configurations pageUser is redirected on this page once they connect their AWS Account with Opsify. 
+
+  - Users have two choices further, either select Auto Deployement or go ahead with the Manual Deployment. 
+
+    1. Opsify's **Auto Deployment** module handles all the core architecture required for deployment which resides under the 'Start Auto Deployment' button.   
+
+    2. Opsify's **Manual Deployment** module provides user, a very close sight of their own configurations and helps them deploy their project by themselves. Opsify provides all the configurtions and cost approximations for a particular repository. 
 
 Required auth environment variables:
 
 ```bash
-AUTH_GITHUB_ID=
-AUTH_GITHUB_SECRET=
-AUTH_SECRET=
+AUTH_GITHUB_ID='YOUR_AUTH_GITHUB_ID'
+AUTH_GITHUB_SECRET='YOUR_AUTH_GITHUB_SECRET'
+AUTH_SECRET='YOUR_AUTH_SECRET'
+AUTH_URL='YOUR_GITHUB_CALLBACK_URL'
+NEXT_PUBLIC_BOOTSTRAP_URL='YOUR_BOOTSTRAP_FILE_LOCATION_URL'
+NEXT_PUBLIC_SUPABASE_URL='YOUR_SUPABASE_URL'
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY='YOUR_SUPABASE_PUBLISHABLE_KEY'
 ```
 
 ## Start Cloudflare tunnel
