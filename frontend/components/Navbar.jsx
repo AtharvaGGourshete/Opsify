@@ -16,7 +16,59 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import {
+  CircleAlertIcon,
+  CircleCheckIcon,
+  CircleDashedIcon,
+} from "lucide-react"
+
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu"
+
+const components = [
+  {
+    title: "Alert Dialog",
+    href: "/docs/primitives/alert-dialog",
+    description:
+      "A modal dialog that interrupts the user with important content and expects a response.",
+  },
+  {
+    title: "Hover Card",
+    href: "/docs/primitives/hover-card",
+    description:
+      "For sighted users to preview content available behind a link.",
+  },
+  {
+    title: "Progress",
+    href: "/docs/primitives/progress",
+    description:
+      "Displays an indicator showing the completion progress of a task, typically displayed as a progress bar.",
+  },
+  {
+    title: "Scroll-area",
+    href: "/docs/primitives/scroll-area",
+    description: "Visually or semantically separates content.",
+  },
+  {
+    title: "Tabs",
+    href: "/docs/primitives/tabs",
+    description:
+      "A set of layered sections of content—known as tab panels—that are displayed one at a time.",
+  },
+  {
+    title: "Tooltip",
+    href: "/docs/primitives/tooltip",
+    description:
+      "A popup that displays information related to an element when the element receives keyboard focus or the mouse hovers over it.",
+  },
+]
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -72,8 +124,7 @@ export default function Navbar() {
               onOpenChange={setShowAuthDialog}
             >
               <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
+                <div
                   className="
                     cursor-pointer
                     rounded-xl
@@ -86,25 +137,22 @@ export default function Navbar() {
                     transition-all
                     hover:border-black/20
                     hover:bg-white/50
+                    py-1
+                    px-3
                   "
                 >
                   Sign In
-                </Button>
-
+                </div>
               </AlertDialogTrigger>
 
               <AlertDialogContent>
-
                 <AlertDialogHeader>
-
                   <AlertDialogTitle>
                     Sign in to Opsify
                   </AlertDialogTitle>
-
                 </AlertDialogHeader>
 
                 <AlertDialogFooter>
-
                   <AlertDialogCancel>
                     <span className="cursor-pointer">
                       Cancel
@@ -114,25 +162,82 @@ export default function Navbar() {
                   <AlertDialogAction asChild>
                     <SignIn />
                   </AlertDialogAction>
-
                 </AlertDialogFooter>
-
               </AlertDialogContent>
-
             </AlertDialog>
-
           </div>
-
         ) : (
-
           <div className="hidden w-1/4 items-center justify-end md:flex">
-
-            <div className="relative">
-
+            <div className="relative flex items-center gap-2">
               {/* =================================================
                   PROFILE BUTTON
               ================================================= */}
+              
 
+              <div>
+                <NavigationMenu>
+                  <NavigationMenuList>
+                    <NavigationMenuItem>
+                      <NavigationMenuTrigger>Getting started</NavigationMenuTrigger>
+                      <NavigationMenuContent>
+                        <ul className="w-96">
+                          <ListItem href="/docs" title="Introduction">
+                            Re-usable components built with Tailwind CSS.
+                          </ListItem>
+                          <ListItem href="/docs/installation" title="Installation">
+                            How to install dependencies and structure your app.
+                          </ListItem>
+                          <ListItem href="/docs/primitives/typography" title="Typography">
+                            Styles for headings, paragraphs, lists...etc
+                          </ListItem>
+                        </ul>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
+                    <NavigationMenuItem className="hidden md:flex">
+                      <NavigationMenuTrigger>Components</NavigationMenuTrigger>
+                      <NavigationMenuContent>
+                        <ul className="grid w-[400px] gap-2 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                          {components.map((component) => (
+                            <ListItem
+                              key={component.title}
+                              title={component.title}
+                              href={component.href}
+                            >
+                              {component.description}
+                            </ListItem>
+                          ))}
+                        </ul>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
+                    <NavigationMenuItem>
+                      <NavigationMenuTrigger>With Icon</NavigationMenuTrigger>
+                      <NavigationMenuContent>
+                        <ul className="grid w-[200px]">
+                          <li>
+                            <NavigationMenuLink asChild>
+                              <Link href="#" className="flex-row items-center gap-2"><CircleAlertIcon />Backlog</Link>
+                            </NavigationMenuLink>
+                            <NavigationMenuLink asChild>
+                              <Link href="#" className="flex-row items-center gap-2"><CircleDashedIcon />To Do</Link>
+                            </NavigationMenuLink>
+                            <NavigationMenuLink asChild>
+                              <Link href="#" className="flex-row items-center gap-2"><CircleCheckIcon />Done</Link>
+                            </NavigationMenuLink>
+                          </li>
+                        </ul>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
+                    <NavigationMenuItem>
+                      <NavigationMenuLink className={navigationMenuTriggerStyle()} asChild>
+                        <Link href="/docs">Docs</Link>
+                      </NavigationMenuLink>
+                    </NavigationMenuItem>
+                  </NavigationMenuList>
+                </NavigationMenu>
+              </div>
+              {/* =================================================
+                  DROPDOWN
+              ================================================= */}
               <button
                 onClick={() =>
                   setDropdownOpen(!dropdownOpen)
@@ -156,34 +261,22 @@ export default function Navbar() {
                   hover:bg-white/40
                 "
               >
-
                 {session.user.image ? (
-
                   <img
                     src={session.user.image}
                     className="h-full w-full cursor-pointer object-cover"
                     alt="Profile"
                   />
-
                 ) : (
-
                   <User className="h-5 w-5 text-black" />
-
                 )}
-
               </button>
-
-              {/* =================================================
-                  DROPDOWN
-              ================================================= */}
-
               {dropdownOpen && (
-
                 <div
                   className="
                     absolute
                     right-0
-                    mt-3
+                    mt-40
                     w-52
                     origin-top-right
                     overflow-hidden
@@ -197,7 +290,6 @@ export default function Navbar() {
                     backdrop-saturate-150
                   "
                 >
-
                   <Link
                     href="/profile"
                     onClick={() =>
@@ -220,7 +312,6 @@ export default function Navbar() {
                     <User size={15} />
                     Profile
                   </Link>
-
                   <div
                     className="
                       mt-1
@@ -243,25 +334,17 @@ export default function Navbar() {
                   >
                     <SignOut />
                   </div>
-
                 </div>
-
               )}
-
             </div>
-
           </div>
-
         )}
 
         {/* =====================================================
             MOBILE MENU BUTTON
         ===================================================== */}
-
         {session?.user && (
-
           <div className="flex md:hidden">
-
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="
@@ -283,27 +366,20 @@ export default function Navbar() {
                 focus:outline-none
               "
             >
-
               {isOpen ? (
                 <X className="h-5 w-5" />
               ) : (
                 <Menu className="h-5 w-5" />
               )}
-
             </button>
-
           </div>
-
         )}
-
       </div>
 
       {/* =======================================================
           MOBILE NAVIGATION
       ======================================================= */}
-
       {isOpen && session?.user && (
-
         <div
           className="
             border-t
@@ -318,9 +394,7 @@ export default function Navbar() {
             md:hidden
           "
         >
-
           <div className="space-y-1.5">
-
             <Link
               href="/dashboard"
               className="
@@ -338,7 +412,6 @@ export default function Navbar() {
             >
               Dashboard
             </Link>
-
             <Link
               href="/profile"
               className="
@@ -356,7 +429,6 @@ export default function Navbar() {
             >
               Profile
             </Link>
-
             <Link
               href="/aws-setup"
               className="
@@ -375,17 +447,32 @@ export default function Navbar() {
             >
               Launch Cloudformation
             </Link>
-
           </div>
-
           <div className="mt-3 border-t border-black/10 px-3 pt-4">
             <SignOut />
           </div>
-
         </div>
-
       )}
-
     </header>
   );
+}
+
+function ListItem({
+  title,
+  children,
+  href,
+  ...props
+}) {
+  return (
+    <li {...props}>
+      <NavigationMenuLink asChild>
+        <Link href={href}>
+          <div className="flex flex-col gap-1 text-sm">
+            <div className="leading-none font-medium">{title}</div>
+            <div className="line-clamp-2 text-muted-foreground">{children}</div>
+          </div>
+        </Link>
+      </NavigationMenuLink>
+    </li>
+  )
 }

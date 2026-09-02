@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 
 const githubConfig = {
   owner: process.env.NEXT_PUBLIC_GITHUB_OWNER,
@@ -22,11 +23,11 @@ function GithubIcon() {
   );
 }
 
-function CloudIcon() {
+function CloudIcon({ className = "h-5 w-5" }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-5 w-5"
+      className={className}
       fill="none"
       stroke="currentColor"
       strokeWidth="1.8"
@@ -74,11 +75,11 @@ function CheckIcon() {
   );
 }
 
-function InfoIcon() {
+function InfoIcon({ className = "h-5 w-5" }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-3.5 w-3.5"
+      className={className}
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -93,35 +94,16 @@ function InfoIcon() {
   );
 }
 
-function StepNumber({ number }) {
-  return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/50 bg-[#58a4b0]/25 text-[10px] font-black text-black shadow-sm backdrop-blur-xl">
-      {number}
-    </div>
-  );
-}
-
 function CreationItem({ title, description }) {
   return (
-    <div
-      className="group rounded-2xl border border-white/70 bg-white/50 p-5 shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/70 hover:shadow-md"
-    >
-      <div className="flex gap-4">
-        <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/60 bg-[#58a4b0]/20 text-black shadow-sm backdrop-blur-xl"
-        >
-          <CheckIcon />
-        </div>
+    <div className="group flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black text-white">
+        <CheckIcon />
+      </div>
 
-        <div>
-          <p className="text-sm font-bold text-black">
-            {title}
-          </p>
-
-          <p className="mt-1 text-xs leading-5 text-black/55">
-            {description}
-          </p>
-        </div>
+      <div>
+        <p className="text-sm font-semibold text-black">{title}</p>
+        <p className="mt-1 text-sm text-zinc-500">{description}</p>
       </div>
     </div>
   );
@@ -145,17 +127,17 @@ export default function AWSSetupPage() {
 
       const github_user_id = session?.user?.githubId;
 
-
-
       if (!github_user_id) {
-        setError("GitHub user ID is missing from the active session. Sign out and sign in again with GitHub.");
-
+        setError(
+          "GitHub user ID is missing from the active session. Sign out and sign in again with GitHub."
+        );
         setLoading(false);
         return;
       }
 
-      const storedRepository =
-        localStorage.getItem("opsify_selected_repository");
+      const storedRepository = localStorage.getItem(
+        "opsify_selected_repository"
+      );
 
       if (!storedRepository) {
         setError(
@@ -171,7 +153,6 @@ export default function AWSSetupPage() {
         repository = JSON.parse(storedRepository);
       } catch {
         localStorage.removeItem("opsify_selected_repository");
-
         setError(
           "The selected GitHub repository could not be loaded. Please select it again."
         );
@@ -179,10 +160,7 @@ export default function AWSSetupPage() {
         return;
       }
 
-      if (
-        !repository?.owner?.login ||
-        !repository?.name
-      ) {
+      if (!repository?.owner?.login || !repository?.name) {
         setError(
           "The selected GitHub repository information is incomplete. Please select the repository again."
         );
@@ -197,9 +175,11 @@ export default function AWSSetupPage() {
       try {
         setLoading(true);
         setError("");
+
         console.log("Checking existing AWS connection...");
 
-        const profileResponse = await fetch(`${apiUrl.replace(/\/$/, "")}/api/auth/users/${github_user_id}`,
+        const profileResponse = await fetch(
+          `${apiUrl.replace(/\/$/, "")}/api/auth/users/${github_user_id}`,
           {
             cache: "no-store",
           }
@@ -208,59 +188,88 @@ export default function AWSSetupPage() {
         const profileData = await profileResponse.json();
 
         console.log("Existing profile:", profileData);
-        if (profileResponse.ok && profileData?.profile?.status === "connected") {
+
+        if (
+          profileResponse.ok &&
+          profileData?.profile?.status === "connected"
+        ) {
           const profile = profileData.profile;
+
           setConnectionId(profile.connection_id || "");
           setStackName(profile.bootstrap_stack_name || "");
           setLaunchUrl("");
           setLoading(false);
+
           return;
         }
 
         console.log("Creating or reusing AWS connection...");
 
-        const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/aws/connections`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            github_user_id: github_user_id,
-
-            github_owner:
-              repository.owner.login,
-
-            github_repository:
-              repository.name,
-
-            github_branch:
-              repository.default_branch || "main",
-          }),
-        });
+        const response = await fetch(
+          `${apiUrl.replace(/\/$/, "")}/api/aws/connections`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              github_user_id: github_user_id,
+              github_owner: repository.owner.login,
+              github_repository: repository.name,
+              github_branch: repository.default_branch || "main",
+            }),
+          }
+        );
 
         const data = await response.json();
+
         console.log("AWS connection response:", data);
-        if (!response.ok) throw new Error(data.message || "Failed to create AWS connection.");
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Failed to create AWS connection."
+          );
+        }
+
         if (data.status === "connected") {
           setConnectionId(data.connectionId || "");
           setStackName(data.stackName || "");
           setLaunchUrl("");
           setLoading(false);
-          return;
-        }
-        if (data.alreadyConnected) {
-          console.log("AWS account is already connected:", data.connection);
-          setConnectionId(data.connectionId || "");
-          setStackName(data.stackName || "");
-          setLaunchUrl("");
+
           return;
         }
 
-        if (!data.launchUrl) throw new Error("AWS connection was created, but no CloudFormation launch URL was returned.");
+        if (data.alreadyConnected) {
+          console.log(
+            "AWS account is already connected:",
+            data.connection
+          );
+
+          setConnectionId(data.connectionId || "");
+          setStackName(data.stackName || "");
+          setLaunchUrl("");
+
+          return;
+        }
+
+        if (!data.launchUrl) {
+          throw new Error(
+            "AWS connection was created, but no CloudFormation launch URL was returned."
+          );
+        }
+
         setLaunchUrl(data.launchUrl);
         setConnectionId(data.connectionId || "");
         setStackName(data.stackName || "");
       } catch (err) {
         console.error("AWS connection preparation failed:", err);
-        setError(err instanceof Error ? err.message : "Failed to prepare AWS connection.");
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to prepare AWS connection."
+        );
       } finally {
         setLoading(false);
       }
@@ -269,30 +278,20 @@ export default function AWSSetupPage() {
     prepareAWSConnection();
   }, [status, session]);
 
-  if (status === "loading") {
+  if (status === "loading" || loading) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#cdedf6] px-6 py-12 text-black">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-white/40 blur-3xl" />
-          <div className="absolute -bottom-40 -right-32 h-[500px] w-[500px] rounded-full bg-[#58a4b0]/20 blur-3xl" />
-        </div>
+      <main className="flex min-h-screen items-center justify-center bg-white p-6 text-black">
+        <div className="flex flex-col items-center gap-5 text-center">
 
-        <div className="relative w-full max-w-lg rounded-[2rem] border border-white/70 bg-white/50 p-10 text-center shadow-[0_30px_100px_-40px_rgba(0,0,0,0.25)] backdrop-blur-2xl">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/50 bg-[#58a4b0]/30 text-black shadow-sm backdrop-blur-xl">
-            <CloudIcon />
+          <div>
+            <h1 className="text-xl font-black tracking-tight">
+              Preparing Connection
+            </h1>
+
+            <p className="mt-2 text-sm text-zinc-500">
+              Checking your GitHub and AWS configuration...
+            </p>
           </div>
-
-          <p className="mt-8 text-xs font-bold uppercase tracking-[0.2em] text-black/40">
-            Opsify
-          </p>
-
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-black">
-            Loading
-          </h1>
-
-          <p className="mt-4 text-sm leading-6 text-black/50">
-            Checking your GitHub authentication.
-          </p>
         </div>
       </main>
     );
@@ -300,31 +299,22 @@ export default function AWSSetupPage() {
 
   if (!session?.user) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#cdedf6] px-6 py-12 text-black">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-0 h-[500px] w-[700px] -translate-x-1/2 rounded-full bg-white/40 blur-3xl" />
-          <div className="absolute -bottom-40 -left-32 h-[450px] w-[450px] rounded-full bg-[#58a4b0]/20 blur-3xl" />
-        </div>
-
-        <div className="relative w-full max-w-lg rounded-[2rem] border border-white/70 bg-white/50 p-8 shadow-[0_30px_100px_-40px_rgba(0,0,0,0.25)] backdrop-blur-2xl md:p-10">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/50 bg-black text-white shadow-lg">
+      <main className="flex min-h-screen items-center justify-center bg-white p-6">
+        <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-[0_20px_60px_-30px_rgba(0,0,0,0.22)]">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-black text-white shadow-lg shadow-black/10">
             <GithubIcon />
           </div>
 
-          <p className="mt-8 text-xs font-bold uppercase tracking-[0.2em] text-black/40">
-            Opsify
-          </p>
-
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-black md:text-4xl">
-            Authentication required
+          <h1 className="mt-5 text-2xl font-black tracking-tight text-black">
+            Authentication Required
           </h1>
 
-          <p className="mt-4 text-base leading-7 text-black/55">
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
             Sign in with GitHub before connecting your AWS account to Opsify.
           </p>
 
-          <div className="mt-7 rounded-2xl border border-white/60 bg-white/35 p-4 backdrop-blur-xl">
-            <p className="text-sm font-medium text-black/60">
+          <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+            <p className="text-sm font-medium text-zinc-600">
               Use the Sign In option in the navigation bar to continue.
             </p>
           </div>
@@ -335,36 +325,37 @@ export default function AWSSetupPage() {
 
   if (error) {
     return (
-      <main className="relative min-h-screen overflow-hidden bg-[#cdedf6] px-5 py-10 text-black md:px-8 md:py-7">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full bg-white/40 blur-3xl" />
-          <div className="absolute -bottom-40 -right-32 h-[500px] w-[500px] rounded-full bg-[#58a4b0]/20 blur-3xl" />
-        </div>
-        <div className="relative mx-auto flex min-h-[80vh] max-w-3xl items-center justify-center">
+      <main className="min-h-screen bg-white px-6 py-12 sm:px-10">
+        <div className="mx-auto w-full max-w-6xl">
+          <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-[0_20px_60px_-30px_rgba(0,0,0,0.22)]">
+            <div className="flex items-center gap-4 border-b border-zinc-200 bg-zinc-50 p-6">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-black text-white">
+                <InfoIcon />
+              </div>
 
-          <div className="w-full rounded-[2rem] border border-red-200/70 bg-white/55 p-8 shadow-[0_30px_100px_-40px_rgba(0,0,0,0.25)] backdrop-blur-2xl md:p-12">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-200/70 bg-red-50/70 text-red-600 backdrop-blur-xl">
-              <InfoIcon />
+              <div>
+                <h1 className="text-xl font-black text-black">
+                  AWS Connection Failed
+                </h1>
+
+                <p className="mt-1 text-sm text-zinc-500">
+                  We couldn't initialize your setup.
+                </p>
+              </div>
             </div>
 
-            <p className="mt-8 text-center text-xs font-bold uppercase tracking-[0.2em] text-black/40">
-              Opsify / AWS
-            </p>
+            <div className="p-6">
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                <p className="text-sm font-semibold text-zinc-800">
+                  {error}
+                </p>
+              </div>
 
-            <h1 className="mt-2 text-center text-3xl font-black tracking-tight text-black md:text-4xl">
-              AWS connection failed
-            </h1>
-
-            <div className="mt-6 rounded-2xl border border-red-200/70 bg-red-50/70 p-5 backdrop-blur-xl">
-              <p className="text-sm leading-6 text-red-700">
-                {error}
+              <p className="mt-4 text-sm leading-6 text-zinc-500">
+                Please check your backend and frontend environment
+                configuration, then reload this page.
               </p>
             </div>
-
-            <p className="mt-5 text-center text-xs leading-5 text-black/40">
-              Check your backend and frontend environment configuration,
-              then reload this page.
-            </p>
           </div>
         </div>
       </main>
@@ -372,162 +363,185 @@ export default function AWSSetupPage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#cdedf6] px-5 py-10 text-black md:px-8 md:py-8">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-[600px] w-[600px] rounded-full bg-white/40 blur-3xl" />
-        <div className="absolute left-1/2 top-1/3 h-[500px] w-[700px] -translate-x-1/2 rounded-full bg-white/20 blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-[#58a4b0]/25 blur-3xl" />
-      </div>
+    <main className="bg-[#cdedf6] relative min-h-screen overflow-hidden px-4 py-10 text-black sm:px-6 lg:px-8">
 
-      <div className="relative mx-auto max-w-5xl">
-        <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/45 shadow-[0_30px_100px_-40px_rgba(0,0,0,0.25)] backdrop-blur-2xl backdrop-saturate-150">
+      <div className=" relative mx-auto w-full max-w-6xl space-y-8">
+        {/* Header */}
+        <header>
+          <div className="flex items-center gap-4">
 
-          <div className="relative overflow-hidden bg-[#58a4b0]/85 px-7 py-9 text-black backdrop-blur-xl md:px-10 md:py-11">
+            <div>
 
-            <div className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-white/15 blur-3xl" />
+              <h1 className="mt-1 text-3xl font-black tracking-tight text-black sm:text-4xl">
+                AWS Account Connection
+              </h1>
 
-            <div className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+              <p className="mt-2 text-sm text-zinc-500">
+                Securely connect your GitHub repository to AWS for automated
+                deployments.
+              </p>
+            </div>
+          </div>
+        </header>
 
-            <div className="relative">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/50 bg-white/20 text-black shadow-sm backdrop-blur-xl">
-                  <CloudIcon />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-black/70">AWS account connection</p>
-                </div>
+        {/* Main Card */}
+        <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-[0_20px_60px_-30px_rgba(0,0,0,0.22)]">
+          {/* Step 1 */}
+          <section className="p-6 sm:p-8">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center text-md font-black text-black">
+                01.
               </div>
 
-              <h1 className="mt-8 max-w-2xl text-4xl font-black tracking-[-0.04em] text-black md:text-5xl">Connect your AWS account</h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-white md:text-base">Deploy faster and safer.</p>
+              <h2 className="text-lg font-black tracking-tight text-black">
+                GitHub Configuration
+              </h2>
             </div>
 
-          </div>
-          <div className="bg-white/25 p-7 backdrop-blur-xl md:p-10">
+            <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-black shadow-sm">
+                  <GithubIcon />
+                </div>
 
-            <section>
-              <div className="mb-5 flex items-center gap-3">
-                <StepNumber number="01" />
                 <div>
-                  <h2 className="mt-0.5 text-xl font-black tracking-tight text-black">GitHub configuration</h2>
+                  <Link href={selectedRepository.full_name}>
+                    <p className="mt-1 text-sm font-bold text-black hover:underline">
+                      {selectedRepository
+                        ? selectedRepository.full_name
+                        : "Not configured"}
+                    </p>
+                  </Link>
                 </div>
               </div>
+            </div>
+          </section>
 
-              <div className="rounded-2xl border border-white/70 bg-white/45 p-5 shadow-sm backdrop-blur-xl md:p-6">
+          <div className="border-t border-zinc-200" />
 
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex min-w-0 items-center gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/40 bg-black/90 text-white shadow-sm">
-                      <GithubIcon />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-black/40">Repository</p>
-                      <p className="mt-1 truncate font-mono text-sm font-bold text-black">
-                        {selectedRepository
-                          ? selectedRepository.full_name
-                          : "Not configured"}
+          {/* Step 2 */}
+          <section className="p-6 sm:p-8">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center text-md font-black text-black">
+                02
+              </div>
+
+              <h2 className="text-lg font-black tracking-tight text-black">
+                Resources to Create
+              </h2>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <CreationItem
+                title="Deployment IAM role"
+                description="Dedicated role for Opsify deployments."
+              />
+
+              <CreationItem
+                title="GitHub OIDC trust"
+                description="Uses the existing GitHub Actions OIDC provider."
+              />
+
+              <CreationItem
+                title="SAM deployment permissions"
+                description="Permissions required for application deployment."
+              />
+
+              <CreationItem
+                title="Connection registration"
+                description="Automatically registers the AWS connection with Opsify."
+              />
+            </div>
+          </section>
+
+          {/* Step 3 */}
+          {(connectionId || stackName) && (
+            <>
+              <div className="border-t border-zinc-200" />
+
+              <section className="bg-zinc-50/70 p-6 sm:p-8">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center text-md font-black text-black">
+                    03
+                  </div>
+
+                  <h2 className="text-lg font-black tracking-tight text-black">
+                    Connection Prepared
+                  </h2>
+                </div>
+
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  {connectionId && (
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+                      <p className="text-xs font-bold text-black">
+                        Connection ID
+                      </p>
+
+                      <p className="mt-2 break-all font-mono text-sm text-black">
+                        {connectionId}
                       </p>
                     </div>
-                  </div>
-                  <div className="shrink-0 rounded-xl border border-white/70 bg-white/60 px-4 py-3 shadow-sm backdrop-blur-xl">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-black/40">Branch</p>
-                    <p className="mt-1 font-mono text-xs font-semibold text-black/70">{selectedRepository?.default_branch || "main"}</p>
-                  </div>
-                </div>
+                  )}
 
-              </div>
+                  {stackName && (
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+                      <p className="text-xs font-bold text-black">
+                        Bootstrap Stack
+                      </p>
 
-            </section>
-            <div className="my-9 border-t border-black/10" />
-            <section>
-              <div className="mb-5 flex items-center gap-3">
-                <StepNumber number="02" />
-                <div>
-                  <h2 className="mt-0.5 text-xl font-black tracking-tight text-black">What will be created?</h2>
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <CreationItem title="Deployment IAM role" description="Dedicated role for Opsify deployments." />
-                <CreationItem title="GitHub OIDC trust" description="Uses the existing GitHub Actions OIDC provider." />
-                <CreationItem title="SAM deployment permissions" description="Permissions required for application deployment." />
-                <CreationItem title="Connection registration" description="Automatically registers the AWS connection with Opsify." />
-              </div>
-
-            </section>
-            {(connectionId || stackName) && (
-              <>
-                <div className="my-9 border-t border-black/10" />
-                <section>
-                  <div className="mb-5 flex items-center gap-3">
-                    <StepNumber number="03" />
-                    <div>
-                      <h2 className="mt-0.5 text-xl font-black tracking-tight text-black">Connection prepared</h2>
+                      <p className="mt-2 break-all font-mono text-sm text-black">
+                        {stackName}
+                      </p>
                     </div>
-                  </div>
+                  )}
+                </div>
+              </section>
+            </>
+          )}
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {connectionId && (
-                      <div className="rounded-2xl border border-white/70 bg-white/45 p-5 shadow-sm backdrop-blur-xl">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-black/40">Connection ID</p>
-                        <p className="mt-2 break-all font-mono text-xs font-semibold text-black/70">{connectionId}</p>
-                      </div>
-                    )}
-                    {stackName && (
-                      <div className="rounded-2xl border border-white/70 bg-white/45 p-5 shadow-sm backdrop-blur-xl">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-black/40">Bootstrap Stack</p>
-                        <p className="mt-2 break-all font-mono text-xs font-semibold text-black/70">{stackName}</p>
-                      </div>
-                    )}
-                  </div>
+          <div className="border-t border-zinc-200" />
 
-                </section>
-              </>
-            )}
-            <div className="mt-8">
-
-              {launchUrl ? (
+          {/* Action */}
+          <section className="flex flex-col items-center justify-center bg-zinc-50/70 p-6 sm:p-8">
+            {launchUrl ? (
+              <div className="w-full max-w-md text-center">
                 <a
                   href={launchUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-black px-6 py-4 text-sm font-bold text-white shadow-lg shadow-black/10 transition-all duration-300 hover:bg-black/85 hover:shadow-xl"
+                  className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-black px-6 py-4 text-sm font-bold text-white shadow-lg shadow-black/10 transition-all duration-300 hover:bg-zinc-800 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                 >
+
                   <span>Launch AWS CloudFormation</span>
+
                   <ArrowIcon />
                 </a>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex w-full items-center justify-center rounded-2xl border border-white/60 bg-white/50 px-6 py-4 text-sm font-bold text-black/60 shadow-sm backdrop-blur-xl">
-                    AWS account already connected
-                  </div>
 
-                  <a
-                    href="/deploy/configurations"
-                    className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-black px-6 py-4 text-sm font-bold text-white shadow-lg shadow-black/10 transition-all duration-300 hover:bg-black/85 hover:shadow-xl"
-                  >
-                    <span>Go to deployment configuration</span>
-                    <ArrowIcon />
-                  </a>
-                </div>
-              )}
-              <div className="mt-4 flex items-start justify-center gap-2 px-4">
-                <div className="mt-0.5 text-black/40">
-                  <InfoIcon />
-                </div>
-                <p className="max-w-xl text-center text-xs leading-5 text-black/40">
-                  You&apos;ll be redirected to AWS to review and create the
-                  CloudFormation stack. Once created, Opsify will automatically
-                  register the AWS connection.
+                <p className="mt-4 flex justify-center gap-2 text-xs text-black bg-yellow-50/70 p-3 rounded-lg border border-yellow-200  ">
+                  <InfoIcon className="h-4 w-4" />
+
+                  You'll be redirected to AWS to securely review and create
+                  the stack. Close the console once the stack is created to return here and continue the setup.
                 </p>
               </div>
+            ) : (
+              <div className="w-full max-w-md space-y-4 text-center">
+                <div className="rounded-2xl border border-zinc-200 bg-white p-4 text-sm font-bold text-black shadow-sm">
+                  AWS account is successfully connected.
+                </div>
 
-            </div>
-          </div>
+                <a
+                  href="/deploy/configurations"
+                  className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-black px-6 py-4 text-sm font-bold text-white shadow-lg shadow-black/10 transition-all duration-300 hover:bg-zinc-800 hover:shadow-xl"
+                >
+                  <span>Go to Deployment Configuration</span>
+
+                  <ArrowIcon />
+                </a>
+              </div>
+            )}
+          </section>
         </div>
-        <p className="mt-6 text-center text-[11px] font-medium text-black/40">
-          Opsify securely connects your GitHub deployment workflow to AWS.
-        </p>
       </div>
     </main>
   );

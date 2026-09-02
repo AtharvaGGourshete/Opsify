@@ -28,7 +28,7 @@ export default function RootLayout({ children }) {
     <html
       lang="en"
       className={`${geist.variable} ${geistMono.variable}`}
-      suppressHydrationWarning
+      suppressHydrationWarning={true}
     >
       <body className="min-h-screen bg-white font-sans text-black antialiased">
         <SessionProvider>

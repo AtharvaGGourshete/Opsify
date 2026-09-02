@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 
 const icons = {
   github: (
@@ -249,7 +250,7 @@ export default function DeployPage() {
                 stack, applications, dependencies and infrastructure.
               </p>
             </div>
-
+            <Image src="/deploy-page-hero-image.png" width={600} height={400} alt="Repository Analysis"/>
             {profile && (
               <Badge className="w-fit shrink-0 border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">
                 <span className="mr-2 h-2 w-2 rounded-full bg-emerald-500" />

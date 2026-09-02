@@ -103,7 +103,6 @@ export const createAWSConnection = async (req, res) => {
       });
     }
     if (existing && existing.status === "pending" && existing.connection_id && existing.bootstrap_stack_name) {
-      console.log("AWS connection already pending. Reusing:",existing.connection_id);
 
       const launchUrl = buildLaunchUrl({
           templateUrl,

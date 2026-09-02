@@ -183,10 +183,10 @@ export default async function Home() {
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <ProtectedLink href="/aws-setup" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-6 text-sm font-semibold text-neutral-700 shadow-sm transition-all hover:bg-neutral-50 hover:text-neutral-900">
+            {/* <ProtectedLink href="/aws-setup" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-6 text-sm font-semibold text-neutral-700 shadow-sm transition-all hover:bg-neutral-50 hover:text-neutral-900">
               <Cable />
               Connect to AWS
-            </ProtectedLink>
+            </ProtectedLink> */}
             <ProtectedLink href="/deploy" className="inline-flex h-12 w-60 items-center justify-center rounded-xl bg-neutral-900 px-6 text-sm font-bold text-white shadow-lg shadow-neutral-900/10 transition-all hover:bg-neutral-800">
               <span className="flex items-center gap-2">
                 Deploy your first app
