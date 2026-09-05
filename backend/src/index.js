@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import repositoryRoutes from "./routes/repositoryRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import awsConnectionRoutes from "./routes/awsConnectionRoutes.js";
+import manualDeploymentRoutes from "./routes/manualDeploymentRoutes.js";
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/repositories", repositoryRoutes);
 app.use("/api/auth", userRoutes);
 app.use("/api/aws", awsConnectionRoutes);
+app.use("/api/deployment", manualDeploymentRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

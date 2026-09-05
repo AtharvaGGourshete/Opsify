@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export default function ConfigurationsPage() {
   const [selectedRepository, setSelectedRepository] = useState(null);
@@ -410,12 +409,6 @@ export default function ConfigurationsPage() {
     };
   };
 
-  /*
-   * -------------------------------------------------------------
-   * MANUAL DEPLOYMENT
-   * -------------------------------------------------------------
-   */
-
   function handleGenerateManualPlan() {
     if (!profile || generatingPlan) {
       return;
@@ -452,12 +445,6 @@ export default function ConfigurationsPage() {
     }, 1800);
   }
 
-  /*
-   * -------------------------------------------------------------
-   * AUTO DEPLOYMENT
-   * -------------------------------------------------------------
-   */
-
   function handleAutoDeploy() {
     if (!profile || autoDeploying) {
       return;
@@ -493,12 +480,6 @@ export default function ConfigurationsPage() {
     }, 1500);
   }
 
-  /*
-   * -------------------------------------------------------------
-   * LOADING
-   * -------------------------------------------------------------
-   */
-
   if (loading) {
     return (
       <main className="min-h-screen bg-[#fafafa] text-zinc-950">
@@ -514,12 +495,6 @@ export default function ConfigurationsPage() {
       </main>
     );
   }
-
-  /*
-   * -------------------------------------------------------------
-   * ERROR
-   * -------------------------------------------------------------
-   */
 
   if (error && !selectedRepository) {
     return (
@@ -549,12 +524,6 @@ export default function ConfigurationsPage() {
       </main>
     );
   }
-
-  /*
-   * -------------------------------------------------------------
-   * MAIN PAGE
-   * -------------------------------------------------------------
-   */
 
   return (
     <main className="min-h-screen bg-[#f7f7f8] text-zinc-950">
@@ -776,7 +745,6 @@ export default function ConfigurationsPage() {
 
               <div className="p-6 sm:p-7">
                 <div className="group relative overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 transition hover:border-zinc-300">
-                  <div className="absolute inset-y-0 left-0 w-1 bg-zinc-950" />
 
                   <div className="p-5 sm:p-6">
                     <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -1048,10 +1016,6 @@ export default function ConfigurationsPage() {
                       <StepNumber number="03" />
 
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                          AI configuration
-                        </p>
-
                         <h2 className="mt-1 text-xl font-black tracking-tight">
                           Generate AWS deployment plan
                         </h2>
@@ -1072,9 +1036,6 @@ export default function ConfigurationsPage() {
 
                         <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                           <div className="flex items-start gap-4">
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-zinc-950 text-white shadow-lg">
-                              <SparkleIcon />
-                            </div>
 
                             <div>
                               <p className="text-sm font-black text-zinc-950">
